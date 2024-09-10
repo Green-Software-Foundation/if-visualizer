@@ -71,7 +71,7 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
   };
 
   return (
-    <div>
+    <div className="py-12 md:py-16">
       <Card className="mb-4">
         <CardHeader>
           <CardTitle>{data?.name }</CardTitle>
