@@ -2,11 +2,14 @@ import { useState, useEffect, useCallback } from "react";
 import type { ColDef } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import "../../styles/ag-grid-theme-builder.css";
-
+import "ag-grid-enterprise";
 // Row Data Interface
 interface IRow {
-  [key: string]: string | number;
+  [key: string]: string | number | boolean | IRow[] | undefined;
   Component: string;
+  children?: IRow[];
+  expanded?: boolean;
+  level: number;
 }
 
 interface OutputData {
@@ -44,55 +47,112 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
   const [rowData, setRowData] = useState<IRow[]>([]);
   const [colDefs, setColDefs] = useState<ColDef[]>([]);
 
-  const parseYamlData = useCallback((data: YAMLData) => {
-    const extractOutputs = (node: TreeNode, path: string[] = []): OutputData[] => {
-      if (node.outputs && !node.children) {
-        return node.outputs.map((output) => ({
-          ...output,
-          path: path.join("/"),
-        }));
-      }
-      if (node.children) {
-        return Object.entries(node.children).flatMap(([key, value]) => {
-          return extractOutputs(value, [...path, key]);
+  const parseYamlData = useCallback(
+    (data: YAMLData) => {
+      const parseNode = (
+        node: TreeNode,
+        path: string[] = [],
+        level: number = 0
+      ): IRow => {
+        const outputs = node.outputs || [];
+        const row: IRow = {
+          Component: path[path.length - 1] || data.name,
+          level,
+          expanded: false,
+        };
+
+        outputs.forEach((output, index) => {
+          row[`T${index + 1}`] = output[selectedMetric] || "";
         });
+
+        if (node.children) {
+          row.children = Object.entries(node.children).map(([key, value]) =>
+            parseNode(value, [...path, key], level + 1)
+          );
+        }
+
+        return row;
+      };
+
+      const rows = Object.entries(data.tree.children || {}).map(
+        ([key, value]) => parseNode(value, [key])
+      );
+
+      const allOutputs = data.tree.outputs || [];
+      const uniqueTimestamps = [
+        ...new Set(allOutputs.map((output) => output.timestamp)),
+      ].sort();
+
+      return { timestamps: uniqueTimestamps, rows };
+    },
+    [selectedMetric]
+  );
+
+  const getExpandedChildCount = useCallback((row: IRow): number => {
+    let count = row.children?.length || 0;
+    row.children?.forEach((child) => {
+      if (child.expanded) {
+        count += getExpandedChildCount(child);
       }
-      return [];
-    };
-
-    const allOutputs = extractOutputs(data.tree);
-    const uniqueTimestamps = [...new Set(allOutputs.map((output) => output.timestamp))].sort();
-    const uniquePaths = [...new Set(allOutputs.map((output) => output.path))];
-
-    const rows = uniquePaths.map((path) => {
-      const row: IRow = { Component: path as string };
-      uniqueTimestamps.forEach((timestamp, index) => {
-        const output = allOutputs.find(
-          (o) => o.timestamp === timestamp && o.path === path
-        );
-        row[`T${index + 1}`] = output ? output[selectedMetric] : "";
-      });
-      return row;
     });
+    return count;
+  }, []);
 
-    return { timestamps: uniqueTimestamps, rows };
-  }, [selectedMetric]);
+  const toggleExpand = useCallback(
+    (rowIndex: number) => {
+      setRowData((prevData) => {
+        const newData = [...prevData];
+        const row = newData[rowIndex];
+        row.expanded = !row.expanded;
 
-  const updateColumnDefs = (timestamps: string[]) => {
-    const columnDefs: ColDef[] = [
-      {
-        field: 'Component',
-        headerName: 'Component',
-        pinned: 'left',
-      },
-      ...timestamps.map((_, index) => ({
-        field: `T${index + 1}`,
-        headerName: `T${index + 1}`,
-        valueFormatter: (params: {value : string}) => params.value || 'N/A',
-      })),
-    ];
-    setColDefs(columnDefs);
-  };
+        if (row.expanded && row.children) {
+          newData.splice(rowIndex + 1, 0, ...row.children);
+        } else if (!row.expanded && row.children) {
+          const removeCount = getExpandedChildCount(row);
+          newData.splice(rowIndex + 1, removeCount);
+        }
+
+        return newData;
+      });
+    },
+    [getExpandedChildCount]
+  );
+  const updateColumnDefs = useCallback(
+    (timestamps: string[]) => {
+      const columnDefs: ColDef[] = [
+        {
+          field: "Component",
+          headerName: "Component",
+          cellRenderer: (params: {
+            data: IRow;
+            node: { rowIndex: number };
+          }) => {
+            const { data, node } = params;
+            const indent = data.level * 20;
+            const expandIcon = data.children ? (data.expanded ? "▼" : "▶") : "";
+            return (
+              <div style={{ paddingLeft: `${indent}px` }}>
+                <span
+                  style={{ cursor: "pointer", marginRight: "5px" }}
+                  onClick={() => toggleExpand(node.rowIndex)}
+                >
+                  {expandIcon}
+                </span>
+                {data.Component}
+              </div>
+            );
+          },
+        },
+        ...timestamps.map((_, index) => ({
+          field: `T${index + 1}`,
+          headerName: `T${index + 1}`,
+          valueFormatter: (params: { value: string }) => params.value || "N/A",
+        })),
+      ];
+      setColDefs(columnDefs);
+    },
+    [toggleExpand]
+  );
 
   useEffect(() => {
     if (data) {
@@ -100,7 +160,7 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
       setRowData(rows);
       updateColumnDefs(timestamps);
     }
-  }, [data, selectedMetric, parseYamlData]);
+  }, [data, selectedMetric, parseYamlData, updateColumnDefs]);
 
   return (
     <div className="ag-theme-custom" style={{ height: 500 }}>
@@ -111,6 +171,7 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
         autoSizeStrategy={{
           type: "fitCellContents",
         }}
+        animateRows={true}
       />
     </div>
   );
