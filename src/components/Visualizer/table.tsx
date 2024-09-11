@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import type { ColDef } from "ag-grid-community";
+import type { ColDef, AgGridEvent } from "ag-grid-community";
 import { AgGridReact } from "ag-grid-react";
 import "../../styles/ag-grid-theme-builder.css";
 import {
@@ -10,7 +10,6 @@ import {
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
-import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Tooltip,
@@ -34,6 +33,9 @@ interface OutputData {
 interface TreeNode {
   children?: { [key: string]: TreeNode };
   outputs?: OutputData[];
+  inputs?: { [key: string]: number | string }[];
+  pipeline?: { compute: string[] };
+  defaults?: { [key: string]: number | string };
 }
 
 interface YAMLData {
@@ -44,7 +46,12 @@ interface YAMLData {
     type: string;
   };
   explain: {
-    [key: string]: string;
+    [key: string]: {
+      plugins?: string[];
+      unit?: string;
+      description: string;
+      "aggregation-method"?: string;
+    };
   };
   explainer: boolean;
   tree: TreeNode;
@@ -57,15 +64,20 @@ interface TableProps {
 
 interface CellDetails {
   inputs: {
-    [key: string]: any;
+    [key: string]: number | string;
   };
   outputs: {
-    [key: string]: any;
+    [key: string]: number | string;
   };
   pipeline: string[];
   defaults: {
-    [key: string]: any;
-  }
+    [key: string]: number | string;
+  };
+}
+
+interface Explanation {
+  description?: string;
+  plugins?: string[];
 }
 
 const defaultColDef: ColDef = {
@@ -79,9 +91,10 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
   const [colDefs, setColDefs] = useState<ColDef[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [cellDetails, setCellDetails] = useState<CellDetails | null>(null);
-  const [explanations, setExplanations] = useState<Record<string, string>>({});
+  const [explanations, setExplanations] = useState<Record<string, Explanation>>(
+    {}
+  );
   const [highlightedPlugins, setHighlightedPlugins] = useState<string[]>([]);
-
   const parseYamlData = useCallback(
     (data: YAMLData) => {
       const parseNode = (
@@ -123,11 +136,6 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
     [selectedMetric]
   );
 
-  const parseExplanations = useCallback((data: YAMLData) => {
-    const explanations = data.explain || {};
-    return explanations;
-  }, []);
-
   const updateColumnDefs = useCallback((timestamps: string[]) => {
     const columnDefs: ColDef[] = [
       {
@@ -152,13 +160,16 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
     setColDefs(columnDefs);
   }, []);
 
-  const handleCellClick = (params: any) => {
-    const rowData = params.data;
-    const timestamp = params.colDef.field; // This should be T1, T2, etc.
+  const handleCellClick = (params: AgGridEvent) => {
+    const { data: rowData, colDef } = params as unknown as {
+      data: IRow;
+      colDef: { field: string };
+    };
+    const timestamp = colDef.field;
     const componentName = rowData.Component;
 
     // Find the corresponding data in the YAML structure
-    const componentData = findComponentData(data?.tree, componentName);
+    const componentData = findComponentData(data?.tree || null, componentName);
     if (!componentData) return;
 
     const timeIndex = parseInt(timestamp.slice(1)) - 1; // Convert T1, T2, etc. to 0-based index
@@ -178,7 +189,10 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
     setIsDrawerOpen(true);
   };
   // Helper function to find component data in the tree
-  const findComponentData = (tree: any, componentName: string): any => {
+  const findComponentData = (
+    tree: TreeNode | null,
+    componentName: string
+  ): TreeNode | null => {
     if (!tree) return null;
 
     // Check if the current node is the component we're looking for
@@ -206,13 +220,16 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
 
   useEffect(() => {
     if (data && data.explainer) {
-      const explanationData = parseExplanations(data);
-      setExplanations(explanationData);
+      setExplanations(data.explain);
     }
-  }, [data, parseExplanations]);
+  }, [data]);
 
   const isHighlighted = (key: string) => {
-    return explanations[key]?.plugins?.some(plugin => highlightedPlugins.includes(plugin)) || false;
+    return (
+      explanations[key]?.plugins?.some((plugin) =>
+        highlightedPlugins.includes(plugin)
+      ) || false
+    );
   };
 
   return (
@@ -259,19 +276,27 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
                       {Object.entries(cellDetails.inputs).map(
                         ([key, value]) => (
                           <div key={key}>
-                            {explanations[key]?.description || explanations[key]?.plugins ? (
+                            {explanations[key]?.description ||
+                            explanations[key]?.plugins ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <p
-                                    className={`cursor-help ${isHighlighted(key) ? 'bg-primary/50' : ''}`}
-                                    onMouseEnter={() => setHighlightedPlugins(explanations[key]?.plugins || [])}
-                                    onMouseLeave={() => setHighlightedPlugins([])}
+                                    className={`cursor-help ${
+                                      isHighlighted(key) ? "bg-primary/50" : ""
+                                    }`}
+                                    onMouseEnter={() =>
+                                      setHighlightedPlugins(
+                                        explanations[key]?.plugins || []
+                                      )
+                                    }
+                                    onMouseLeave={() =>
+                                      setHighlightedPlugins([])
+                                    }
                                   >{`${key}: ${value}`}</p>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  {explanations[key]?.description && <p>{explanations[key].description}</p>}
-                                  {explanations[key]?.plugins && (
-                                    <p>Plugins: {explanations[key].plugins.join(', ')}</p>
+                                  {explanations[key]?.description && (
+                                    <p>{explanations[key].description}</p>
                                   )}
                                 </TooltipContent>
                               </Tooltip>
@@ -293,7 +318,11 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
                     {cellDetails.pipeline.map((step, index) => (
                       <div key={index}>
                         <p
-                          className={`cursor-pointer ${highlightedPlugins.includes(step) ? 'bg-primary/50' : ''}`}
+                          className={`cursor-pointer ${
+                            highlightedPlugins.includes(step)
+                              ? "bg-primary/50"
+                              : ""
+                          }`}
                           onMouseEnter={() => setHighlightedPlugins([step])}
                           onMouseLeave={() => setHighlightedPlugins([])}
                         >
@@ -314,19 +343,27 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
                       {Object.entries(cellDetails.outputs).map(
                         ([key, value]) => (
                           <div key={key}>
-                            {explanations[key]?.description || explanations[key]?.plugins ? (
+                            {explanations[key]?.description ||
+                            explanations[key]?.plugins ? (
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <p
-                                    className={`cursor-help ${isHighlighted(key) ? 'bg-primary/50' : ''}`}
-                                    onMouseEnter={() => setHighlightedPlugins(explanations[key]?.plugins || [])}
-                                    onMouseLeave={() => setHighlightedPlugins([])}
+                                    className={`cursor-help ${
+                                      isHighlighted(key) ? "bg-primary/50" : ""
+                                    }`}
+                                    onMouseEnter={() =>
+                                      setHighlightedPlugins(
+                                        explanations[key]?.plugins || []
+                                      )
+                                    }
+                                    onMouseLeave={() =>
+                                      setHighlightedPlugins([])
+                                    }
                                   >{`${key}: ${value}`}</p>
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                  {explanations[key]?.description && <p>{explanations[key].description}</p>}
-                                  {explanations[key]?.plugins && (
-                                    <p>Plugins: {explanations[key].plugins.join(', ')}</p>
+                                  {explanations[key]?.description && (
+                                    <p>{explanations[key].description}</p>
                                   )}
                                 </TooltipContent>
                               </Tooltip>

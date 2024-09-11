@@ -39,6 +39,15 @@ interface YAMLData {
     metrics: string[];
     type: string;
   };
+  explain: {
+    [key: string]: {
+      plugins?: string[];
+      unit?: string;
+      description: string;
+      "aggregation-method"?: string;
+    };
+  };
+  explainer: boolean;
   tree: TreeNode;
 }
 
