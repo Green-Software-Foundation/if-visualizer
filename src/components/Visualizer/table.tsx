@@ -1,7 +1,13 @@
-import { useState, useEffect, useCallback } from "react";
-import type { ColDef, AgGridEvent } from "ag-grid-community";
-import { AgGridReact } from "ag-grid-react";
-import "../../styles/ag-grid-theme-builder.css";
+import { useState, useEffect, useCallback, useMemo } from "react";
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  flexRender,
+  createColumnHelper,
+  getExpandedRowModel,
+} from "@tanstack/react-table";
+import type { ExpandedState } from "@tanstack/react-table";
 import {
   Drawer,
   DrawerClose,
@@ -17,12 +23,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ChevronRight, ChevronDown } from "lucide-react";
 
 // Row Data Interface
 interface IRow {
-  [key: string]: string | number | boolean | undefined;
+  [key: string]: string | number | boolean | undefined | IRow[];
   Component: string;
-  level: number;
+  subRows?: IRow[];
 }
 
 interface OutputData {
@@ -80,51 +87,41 @@ interface Explanation {
   plugins?: string[];
 }
 
-const defaultColDef: ColDef = {
-  sortable: true,
-  filter: true,
-};
-
-// Create new Table component
 const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
   const [rowData, setRowData] = useState<IRow[]>([]);
-  const [colDefs, setColDefs] = useState<ColDef[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [cellDetails, setCellDetails] = useState<CellDetails | null>(null);
   const [explanations, setExplanations] = useState<Record<string, Explanation>>(
     {}
   );
   const [highlightedPlugins, setHighlightedPlugins] = useState<string[]>([]);
+  const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
+
+  const columnHelper = createColumnHelper<IRow>();
+
   const parseYamlData = useCallback(
     (data: YAMLData) => {
-      const parseNode = (
-        node: TreeNode,
-        path: string[] = [],
-        level: number = 0,
-        rows: IRow[] = []
-      ): IRow[] => {
+      const parseNode = (node: TreeNode, path: string[] = []): IRow => {
         const outputs = node.outputs || [];
         const row: IRow = {
           Component: path[path.length - 1] || data.name,
-          level,
+          subRows: [],
         };
 
         outputs.forEach((output, index) => {
           row[`T${index + 1}`] = output[selectedMetric] || "";
         });
 
-        rows.push(row);
-
         if (node.children) {
-          Object.entries(node.children).forEach(([key, value]) => {
-            parseNode(value, [...path, key], level + 1, rows);
-          });
+          row.subRows = Object.entries(node.children).map(([key, value]) =>
+            parseNode(value, [...path, key])
+          );
         }
 
-        return rows;
+        return row;
       };
 
-      const rows = parseNode(data.tree, []);
+      const rows = [parseNode(data.tree)];
 
       const allOutputs = data.tree.outputs || [];
       const uniqueTimestamps = [
@@ -136,48 +133,78 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
     [selectedMetric]
   );
 
-  const updateColumnDefs = useCallback((timestamps: string[]) => {
-    const columnDefs: ColDef[] = [
-      {
-        field: "Component",
-        headerName: "Component",
-        cellRenderer: (params: { data: IRow }) => {
-          const { data } = params;
-          const indent = data.level * 20;
-          return (
-            <div style={{ paddingLeft: `${indent}px` }}>{data.Component}</div>
-          );
-        },
-        pinned: "left",
-        lockPosition: true,
-      },
-      ...timestamps.map((_, index) => ({
-        field: `T${index + 1}`,
-        headerName: `T${index + 1}`,
-        valueFormatter: (params: { value: string }) => params.value || "N/A",
-      })),
-    ];
-    setColDefs(columnDefs);
-  }, []);
+  const columns = useMemo(() => {
+    if (!data) return [];
 
-  const handleCellClick = (params: AgGridEvent) => {
-    const { data: rowData, colDef } = params as unknown as {
-      data: IRow;
-      colDef: { field: string };
-    };
-    const timestamp = colDef.field;
+    const { timestamps } = parseYamlData(data);
+    return [
+      columnHelper.accessor("Component", {
+        header: "Component",
+        cell: ({ row, getValue }) => (
+          <div className="flex items-center">
+            <div
+              style={{ paddingLeft: `${row.depth * 32}px` }}
+              className="flex items-center gap-2"
+            >
+              {row.getCanExpand() ? (
+                <button
+                  {...{
+                    onClick: (e) => {
+                      e.stopPropagation();
+                      row.getToggleExpandedHandler()();
+                    },
+                    style: { cursor: "pointer" },
+                  }}
+                >
+                  {row.getIsExpanded() ? (
+                    <ChevronDown size={16} />
+                  ) : (
+                    <ChevronRight size={16} />
+                  )}
+                </button>
+              ) : null}
+              <span>{getValue()}</span>
+            </div>
+          </div>
+        ),
+        size: 250, // Set a wider fixed width for the Component column
+      }),
+      ...timestamps.map((_, index) =>
+        columnHelper.accessor(`T${index + 1}` as const, {
+          header: `T${index + 1}`,
+          cell: (info) => info.getValue() || "N/A",
+        })
+      ),
+    ];
+  }, [data, parseYamlData, columnHelper]);
+
+  const table = useReactTable({
+    data: rowData,
+    columns,
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getExpandedRowModel: getExpandedRowModel(),
+    getSubRows: (row) => row.subRows,
+    onExpandedChange: setExpandedRows,
+    state: {
+      expanded: expandedRows,
+    },
+  });
+
+  const handleCellClick = (rowData: IRow, columnId: string) => {
     const componentName = rowData.Component;
+    const timestamp = columnId;
 
     // Find the corresponding data in the YAML structure
     const componentData = findComponentData(data?.tree || null, componentName);
     if (!componentData) return;
 
-    const timeIndex = parseInt(timestamp.slice(1)) - 1; // Convert T1, T2, etc. to 0-based index
+    const timeIndex = parseInt(timestamp.slice(1)) - 1;
     const inputData = componentData.inputs?.[timeIndex] || {};
     const outputData = componentData.outputs?.[timeIndex] || {};
     const pipelineData = componentData.pipeline?.compute || [];
     const defaultsData = componentData.defaults || {};
-    // Construct cell details
+
     const details: CellDetails = {
       defaults: defaultsData,
       inputs: inputData,
@@ -188,6 +215,7 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
     setCellDetails(details);
     setIsDrawerOpen(true);
   };
+
   // Helper function to find component data in the tree
   const findComponentData = (
     tree: TreeNode | null,
@@ -212,11 +240,10 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
 
   useEffect(() => {
     if (data) {
-      const { timestamps, rows } = parseYamlData(data);
+      const { rows } = parseYamlData(data);
       setRowData(rows);
-      updateColumnDefs(timestamps);
     }
-  }, [data, selectedMetric, parseYamlData, updateColumnDefs]);
+  }, [data, selectedMetric, parseYamlData]);
 
   useEffect(() => {
     if (data && data.explainer) {
@@ -233,7 +260,7 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
   };
 
   return (
-    <div className="ag-theme-custom" style={{ height: 500 }}>
+    <div className="overflow-auto relative">
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
         <DrawerContent>
           <DrawerHeader>
@@ -384,18 +411,52 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
         </DrawerContent>
       </Drawer>
 
-      <AgGridReact
-        rowData={rowData}
-        columnDefs={colDefs}
-        defaultColDef={{
-          ...defaultColDef,
-          onCellClicked: handleCellClick,
-        }}
-        autoSizeStrategy={{
-          type: "fitCellContents",
-        }}
-        animateRows={true}
-      />
+      <table className="w-full border-collapse">
+        <thead>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <tr key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <th
+                  key={header.id}
+                  className={`border whitespace-nowrap p-2 ${
+                    header.id === "Component"
+                      ? "sticky left-0 z-10 bg-white"
+                      : ""
+                  }`}
+                >
+                  {flexRender(
+                    header.column.columnDef.header,
+                    header.getContext()
+                  )}
+                </th>
+              ))}
+            </tr>
+          ))}
+        </thead>
+        <tbody>
+          {table.getRowModel().rows.map((row) => (
+            <tr key={row.id}>
+              {row.getVisibleCells().map((cell) => (
+                <td
+                  key={cell.id}
+                  className={`border whitespace-nowrap p-2 cursor-pointer hover:bg-gray-100 ${
+                    cell.column.id === "Component"
+                      ? "sticky left-0 z-10 bg-white"
+                      : ""
+                  }`}
+                  onClick={() => {
+                    if (cell.column.id !== "expander") {
+                      handleCellClick(row.original, cell.column.id);
+                    }
+                  }}
+                >
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 };
