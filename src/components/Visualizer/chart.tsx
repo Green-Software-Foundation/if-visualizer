@@ -55,6 +55,7 @@ const Chart: React.FC<ChartProps> = ({ data, selectedMetric, onHover }) => {
     return null;
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const handleMouseMove = (state: any) => {
     if (state.isTooltipActive) {
       const timestamp = state.activePayload[0].payload.timestampString;
@@ -75,6 +76,7 @@ const Chart: React.FC<ChartProps> = ({ data, selectedMetric, onHover }) => {
         margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
+        
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis

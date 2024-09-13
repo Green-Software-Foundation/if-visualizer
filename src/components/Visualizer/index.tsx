@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 
-import { CalendarIcon, MapPinIcon } from "lucide-react";
+import { CalendarIcon } from "lucide-react";
 
 interface AggregatedData {
   [key: string]: number;
@@ -86,6 +86,17 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
     setHoveredTimestamp(timestamp);
   };
 
+  const getTotalForMetric = (metric: string) => {
+    if (data && data.tree && data.tree.aggregated) {
+      const total = data.tree.aggregated[metric];
+      if (total !== undefined) {
+        const unit = data.explain[metric]?.unit || '';
+        return `${total.toFixed(3)} ${unit}`;
+      }
+    }
+    return '';
+  };
+
   return (
     <div className="py-12 md:py-16">
       <Card className="mb-4">
@@ -95,34 +106,38 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
         </CardHeader>
         <CardContent>
           <div className="flex items-center space-x-2">
-            <Badge variant="secondary">
-              <CalendarIcon className="h-4 w-4 mr-2" />
-              {data?.tree.outputs?.[0]?.timestamp ? 
-                new Date(data.tree.outputs[0].timestamp).toLocaleDateString('en-US', { 
+            {data?.tree.outputs && data.tree.outputs.length > 0 && (
+              <Badge variant="secondary">
+                <CalendarIcon className="h-4 w-4 mr-2" />
+                {`${new Date(data.tree.outputs[0].timestamp).toLocaleDateString('en-US', { 
                   year: 'numeric', 
                   month: 'short', 
                   day: '2-digit' 
-                }) 
-                : '13 Jun 24 - 18 Aug 24'}
-            </Badge>
-            <Badge variant="secondary">
+                })} - ${new Date(data.tree.outputs[data.tree.outputs.length - 1].timestamp).toLocaleDateString('en-US', { 
+                  year: 'numeric', 
+                  month: 'short', 
+                  day: '2-digit' 
+                })}`}
+              </Badge>
+            )}
+            {/* <Badge variant="secondary">
               <MapPinIcon className="h-4 w-4 mr-2" />
               London, UK
-            </Badge>
+            </Badge> */}
           </div>
         </CardContent>
       </Card>
-      <div className="flex flex-col space-y-2">
+      <div className="flex flex-col space-y-2 mt-4">
         <Label>Select Metric</Label>
-        <RadioGroup value={selectedMetric} onValueChange={handleMetricChange}>
-          <div className="flex flex-col space-y-2">
-            {metrics.map((metric) => (
-              <div key={metric} className="flex items-center space-x-2">
-                <RadioGroupItem value={metric} id={metric} />
-                <Label htmlFor={metric}>{metric}</Label>
-              </div>
-            ))}
-          </div>
+        <RadioGroup value={selectedMetric} onValueChange={handleMetricChange} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {metrics.map((metric) => (
+            <RadioGroupItem 
+              key={metric} 
+              value={metric} 
+              label={metric}
+              total={getTotalForMetric(metric)}
+            />
+          ))}
         </RadioGroup>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>

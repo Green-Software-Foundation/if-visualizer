@@ -107,7 +107,7 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric, hoveredTimestamp })
       const parseNode = (node: TreeNode, path: string[] = []): IRow => {
         const outputs = node.outputs || [];
         const row: IRow = {
-          Component: path[path.length - 1] || data.name,
+          Component: path[path.length - 1] || "root",
           subRows: [],
         };
 
@@ -176,12 +176,11 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric, hoveredTimestamp })
         columnHelper.accessor(`T${index + 1}` as const, {
           header: `T${index + 1}`,
           cell: (info) => {
-            const value = info.getValue() || "N/A";
-            console.log(hoveredTimestamp, "****",timestamp)
+            const value = info.getValue();
             const isHighlighted = hoveredTimestamp === timestamp;
             return (
-              <div className={`${isHighlighted ? 'bg-yellow-200' : ''}`}>
-                {value}
+              <div className={isHighlighted ? 'bg-yellow-200' : ''}>
+                {value !== undefined && value !== null ? String(value) : 'N/A'}
               </div>
             );
           },

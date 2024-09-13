@@ -58,17 +58,13 @@ function App() {
               <div className="grid grid-cols-1 gap-x-20 gap-y-12 md:gap-y-16 lg:grid-cols-2 lg:items-center">
                 <div>
                   <h1 className="mb-2 text-xl md:text-3xl font-bold md:mb-6 text-secondary-lightest">
-                    Join the Green Software Foundation
+                    Impact Framework {" "}
                     <span className="text-secondary-default">
-                      Global Summit 2024!
+                      Manifest Visualizer
                     </span>
                   </h1>
                   <p className="md:text-md text-primary-light">
-                    From <strong>October 1-10</strong>, join a series of
-                    exciting in-person events hosted by GSF members. This summit
-                    brings together software practitioners and key stakeholders,
-                    all committed to reducing the environmental impacts of
-                    software.
+                  Explore and visualize environmental impact data from the Green Software Foundation. This tool allows you to input manifest files and analyze various metrics related to software sustainability, helping practitioners and stakeholders understand and reduce the environmental footprint of software.
                   </p>
                 </div>
                 <div className="max-h-full">

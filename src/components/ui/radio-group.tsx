@@ -1,5 +1,4 @@
 import * as React from "react"
-import { CheckIcon } from "@radix-ui/react-icons"
 import * as RadioGroupPrimitive from "@radix-ui/react-radio-group"
 
 import { cn } from "@/lib/utils"
@@ -20,19 +19,28 @@ RadioGroup.displayName = RadioGroupPrimitive.Root.displayName
 
 const RadioGroupItem = React.forwardRef<
   React.ElementRef<typeof RadioGroupPrimitive.Item>,
-  React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item>
->(({ className, ...props }, ref) => {
+  React.ComponentPropsWithoutRef<typeof RadioGroupPrimitive.Item> & {
+    label: string;
+    value: string;
+    total?: string;
+  }
+>(({ className, label, value, total, ...props }, ref) => {
   return (
     <RadioGroupPrimitive.Item
       ref={ref}
       className={cn(
-        "aspect-square h-4 w-4 rounded-full border border-primary text-primary shadow focus:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50",
+        "flex items-center justify-between w-full p-4 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-900 hover:bg-gray-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500",
         className
       )}
       {...props}
+      value={value}
     >
+      <div className="flex flex-col items-start">
+        <span className="text-lg font-semibold">{label}</span>
+        {total && <span className="text-2xl font-bold text-gray-700">{total}</span>}
+      </div>
       <RadioGroupPrimitive.Indicator className="flex items-center justify-center">
-        <CheckIcon className="h-3.5 w-3.5 fill-primary" />
+        <div className="h-4 w-4 rounded-full bg-blue-600" />
       </RadioGroupPrimitive.Indicator>
     </RadioGroupPrimitive.Item>
   )
