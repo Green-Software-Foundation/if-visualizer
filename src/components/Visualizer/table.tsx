@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import {
   useReactTable,
   getCoreRowModel,
@@ -67,6 +67,7 @@ interface YAMLData {
 interface TableProps {
   data: YAMLData | null;
   selectedMetric: string;
+  hoveredTimestamp: string | null;
 }
 
 interface CellDetails {
@@ -87,7 +88,7 @@ interface Explanation {
   plugins?: string[];
 }
 
-const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
+const Table: React.FC<TableProps> = ({ data, selectedMetric, hoveredTimestamp }) => {
   const [rowData, setRowData] = useState<IRow[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [cellDetails, setCellDetails] = useState<CellDetails | null>(null);
@@ -96,6 +97,8 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
   );
   const [highlightedPlugins, setHighlightedPlugins] = useState<string[]>([]);
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
+  const [timestamps, setTimestamps] = useState<string[]>([]);
+  const tableRef = useRef<HTMLDivElement>(null);
 
   const columnHelper = createColumnHelper<IRow>();
 
@@ -169,14 +172,23 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
         ),
         size: 250, // Set a wider fixed width for the Component column
       }),
-      ...timestamps.map((_, index) =>
+      ...timestamps.map((timestamp, index) =>
         columnHelper.accessor(`T${index + 1}` as const, {
           header: `T${index + 1}`,
-          cell: (info) => info.getValue() || "N/A",
+          cell: (info) => {
+            const value = info.getValue() || "N/A";
+            console.log(hoveredTimestamp, "****",timestamp)
+            const isHighlighted = hoveredTimestamp === timestamp;
+            return (
+              <div className={`${isHighlighted ? 'bg-yellow-200' : ''}`}>
+                {value}
+              </div>
+            );
+          },
         })
       ),
     ];
-  }, [data, parseYamlData, columnHelper]);
+  }, [data, parseYamlData, columnHelper, hoveredTimestamp]);
 
   const table = useReactTable({
     data: rowData,
@@ -240,8 +252,9 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
 
   useEffect(() => {
     if (data) {
-      const { rows } = parseYamlData(data);
+      const { rows, timestamps } = parseYamlData(data);
       setRowData(rows);
+      setTimestamps(timestamps);
     }
   }, [data, selectedMetric, parseYamlData]);
 
@@ -250,6 +263,18 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
       setExplanations(data.explain);
     }
   }, [data]);
+
+  useEffect(() => {
+    if (hoveredTimestamp && tableRef.current) {
+      const columnIndex = timestamps.findIndex(t => t === hoveredTimestamp);
+      if (columnIndex !== -1) {
+        const columnElement = tableRef.current.querySelector(`th:nth-child(${columnIndex + 2})`);
+        if (columnElement) {
+          columnElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+        }
+      }
+    }
+  }, [hoveredTimestamp, timestamps]);
 
   const isHighlighted = (key: string) => {
     return (
@@ -260,7 +285,7 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric }) => {
   };
 
   return (
-    <div className="overflow-auto relative">
+    <div className="overflow-auto relative" ref={tableRef}>
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
         <DrawerContent>
           <DrawerHeader>

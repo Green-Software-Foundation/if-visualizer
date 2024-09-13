@@ -31,9 +31,10 @@ interface YAMLData {
 interface ChartProps {
   data: YAMLData | null;
   selectedMetric: string;
+  onHover: (timestamp: string | null) => void;
 }
 
-const Chart: React.FC<ChartProps> = ({ data, selectedMetric }) => {
+const Chart: React.FC<ChartProps> = ({ data, selectedMetric, onHover }) => {
   const chartData = useMemo(() => {
     if (!data || !selectedMetric) return [];
 
@@ -46,6 +47,7 @@ const Chart: React.FC<ChartProps> = ({ data, selectedMetric }) => {
         hour12: false,
       }),
       value: output[selectedMetric] || 0,
+      timestampString: output.timestamp,
     }));
   }, [data, selectedMetric]);
 
@@ -53,9 +55,27 @@ const Chart: React.FC<ChartProps> = ({ data, selectedMetric }) => {
     return null;
   }
 
+  const handleMouseMove = (state: any) => {
+    if (state.isTooltipActive) {
+      const timestamp = state.activePayload[0].payload.timestampString;
+      onHover(timestamp);
+    } else {
+      onHover(null);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    onHover(null);
+  };
+
   return (
     <ResponsiveContainer width="100%" height={400}>
-      <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 10 }}>
+      <LineChart 
+        data={chartData} 
+        margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
+        onMouseMove={handleMouseMove}
+        onMouseLeave={handleMouseLeave}
+      >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis
           dataKey="timestamp"

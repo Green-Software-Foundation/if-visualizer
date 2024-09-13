@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Table from "./table";
 import Chart from "./chart";
 import yaml from "js-yaml";
@@ -56,6 +56,9 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
   const [metrics, setMetrics] = useState<string[]>([]);
   const [selectedMetric, setSelectedMetric] = useState<string>("");
 
+  const [hoveredTimestamp, setHoveredTimestamp] = useState<string | null>(null);
+  const tableRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -77,6 +80,10 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
 
   const handleMetricChange = (metric: string) => {
     setSelectedMetric(metric);
+  };
+
+  const handleChartHover = (timestamp: string | null) => {
+    setHoveredTimestamp(timestamp);
   };
 
   return (
@@ -119,8 +126,18 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
         </RadioGroup>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-        <Chart data={data} selectedMetric={selectedMetric} />
-        <Table data={data} selectedMetric={selectedMetric} />
+        <Chart 
+          data={data} 
+          selectedMetric={selectedMetric} 
+          onHover={handleChartHover}
+        />
+        <div ref={tableRef}>
+          <Table 
+            data={data} 
+            selectedMetric={selectedMetric} 
+            hoveredTimestamp={hoveredTimestamp}
+          />
+        </div>
       </div>
     </div>
   );
