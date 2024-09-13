@@ -29,6 +29,7 @@ import { ChevronRight, ChevronDown } from "lucide-react";
 interface IRow {
   [key: string]: string | number | boolean | undefined | IRow[];
   Component: string;
+  Total: number;
   subRows?: IRow[];
 }
 
@@ -108,11 +109,14 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric, hoveredTimestamp })
         const outputs = node.outputs || [];
         const row: IRow = {
           Component: path[path.length - 1] || "root",
+          Total: 0, // Initialize Total column
           subRows: [],
         };
 
         outputs.forEach((output, index) => {
-          row[`T${index + 1}`] = output[selectedMetric] || "";
+          const value = output[selectedMetric] || 0;
+          row[`T${index + 1}`] = value;
+          row.Total += Number(value); // Add to Total
         });
 
         if (node.children) {
@@ -172,6 +176,11 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric, hoveredTimestamp })
         ),
         size: 250, // Set a wider fixed width for the Component column
       }),
+      columnHelper.accessor("Total", {
+        header: "Total",
+        cell: (info) => info.getValue().toFixed(4),
+        size: 100,
+      }),
       ...timestamps.map((timestamp, index) =>
         columnHelper.accessor(`T${index + 1}` as const, {
           header: `T${index + 1}`,
@@ -180,7 +189,7 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric, hoveredTimestamp })
             const isHighlighted = hoveredTimestamp === timestamp;
             return (
               <div className={isHighlighted ? 'bg-yellow-200' : ''}>
-                {value !== undefined && value !== null ? String(value) : 'N/A'}
+                {value !== undefined && value !== null ? Number(value).toFixed(4) : 'N/A'}
               </div>
             );
           },
