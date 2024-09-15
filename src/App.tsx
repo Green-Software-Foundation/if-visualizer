@@ -17,7 +17,6 @@ import "@fontsource/nunito-sans/500.css";
 import "@fontsource/nunito-sans/700.css";
 import "@fontsource/nunito-sans/900.css";
 
-import HeroImg from "./assets/hero.svg";
 function App() {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
   const [searchParams] = useState(new URLSearchParams(window.location.search));
