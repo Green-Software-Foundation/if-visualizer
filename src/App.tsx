@@ -11,6 +11,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 
+// Fonts
+import "@fontsource/nunito-sans/400.css";
+import "@fontsource/nunito-sans/500.css";
+import "@fontsource/nunito-sans/700.css";
+import "@fontsource/nunito-sans/900.css";
+
 import HeroImg from "./assets/hero.svg";
 function App() {
   const [fileUrl, setFileUrl] = useState<string | null>(null);
@@ -54,7 +60,7 @@ function App() {
           <Visualizer fileUrl={fileUrl} />
         ) : (
           <div>
-            <section className="py-12 md:py-16">
+            {/* <section className="py-12 md:py-16">
               <div className="grid grid-cols-1 gap-x-20 gap-y-12 md:gap-y-16 lg:grid-cols-2 lg:items-center">
                 <div>
                   <h1 className="mb-2 text-xl md:text-3xl font-bold md:mb-6 text-secondary-lightest">
@@ -75,21 +81,23 @@ function App() {
                   />
                 </div>
               </div>
-            </section>
-            <Card>
-              <CardHeader>
-                <CardTitle>File URL</CardTitle>
-                <CardDescription>
-                  Use the URL of the manifest file you want to visualize.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <form onSubmit={handleSubmit} className="flex gap-2">
-                  <Input name="url" placeholder="Raw File URL" />
-                  <Button type="submit">Visualize</Button>
-                </form>
-              </CardContent>
-            </Card>
+            </section> */}
+            <div className="py-10">
+              <Card className="max-w-lg mx-auto ">
+                <CardHeader>
+                  <CardTitle>File URL</CardTitle>
+                  <CardDescription>
+                    Use the URL of the manifest file you want to visualize.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleSubmit} className="flex flex-col gap-2">
+                    <Input name="url" placeholder="Raw File URL" />
+                    <Button type="submit">Visualize</Button>
+                  </form>
+                </CardContent>
+              </Card>
+            </div>
           </div>
         )}
       </div>

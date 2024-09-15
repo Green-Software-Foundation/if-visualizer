@@ -7,6 +7,9 @@ export default {
   ],
   theme: {
   	extend: {
+		fontFamily: {
+			sans: ['Nunito Sans', 'sans-serif'],
+		},
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
@@ -25,11 +28,25 @@ export default {
   			},
   			primary: {
   				DEFAULT: 'hsl(var(--primary))',
-  				foreground: 'hsl(var(--primary-foreground))'
+  				foreground: 'hsl(var(--primary-foreground))',
+  				'darkest-2': 'hsl(var(--primary-darkest-2))',
+  				darkest: 'hsl(var(--primary-darkest))',
+  				darker: 'hsl(var(--primary-darker))',
+  				dark: 'hsl(var(--primary-dark))',
+  				light: 'hsl(var(--primary-light))',
+  				lighter: 'hsl(var(--primary-lighter))',
+  				'lightest-2': 'hsl(var(--primary-lightest-2))',
+  				'lightest-1': 'hsl(var(--primary-lightest-1))',
   			},
   			secondary: {
   				DEFAULT: 'hsl(var(--secondary))',
-  				foreground: 'hsl(var(--secondary-foreground))'
+  				foreground: 'hsl(var(--secondary-foreground))',
+  				darker: 'hsl(var(--secondary-darker))',
+  				dark: 'hsl(var(--secondary-dark))',
+  				light: 'hsl(var(--secondary-light))',
+  				lighter: 'hsl(var(--secondary-lighter))',
+  				'lightest-2': 'hsl(var(--secondary-lightest-2))',
+  				'lightest-1': 'hsl(var(--secondary-lightest-1))',
   			},
   			muted: {
   				DEFAULT: 'hsl(var(--muted))',

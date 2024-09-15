@@ -16,7 +16,7 @@
     --secondary-foreground: 75 42% 28%;
     --secondary-background: 70 50% 98%;
     --muted: 60 4.8% 95.9%;
-    --muted-foreground: 25 5.3% 44.7%;
+    --muted-foreground: 178 100% 11%;
     --accent: 60 4.8% 95.9%;
     --accent-foreground: 24 9.8% 10%;
     --destructive: 0 84.2% 60.2%;
@@ -29,7 +29,22 @@
     --chart-3: 197 37% 24%;
     --chart-4: 43 74% 66%;
     --chart-5: 27 87% 67%;
-    --radius: 0.5rem
+    --radius: 0.5rem;
+    --primary-darkest-2: 178 100% 7%;
+    --primary-darkest: 178 100% 9%;
+    --primary-darker: 178 100% 11%;
+    --primary-dark: 178 100% 16%;
+    --primary-light: 178 20% 61%;
+    --primary-lighter: 178 30% 86%;
+    --primary-lightest-2: 180 33% 92%;
+    --primary-lightest-1: 180 33% 96%;
+
+    --secondary-darker: 75 42% 28%;
+    --secondary-dark: 75 42% 42%;
+    --secondary-light: 75 54% 78%;
+    --secondary-lighter: 75 54% 89%;
+    --secondary-lightest-2: 75 54% 96%;
+    --secondary-lightest-1: 75 54% 98%;
   }
 }
 @layer base {

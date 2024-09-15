@@ -12,7 +12,6 @@ import {
   Drawer,
   DrawerClose,
   DrawerContent,
-  DrawerFooter,
   DrawerHeader,
   DrawerTitle,
 } from "@/components/ui/drawer";
@@ -23,7 +22,17 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ChevronRight, ChevronDown } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ChevronRight, ChevronDown, XIcon } from "lucide-react";
+import { Button } from "../ui/button";
+import Title from "../title";
 
 // Row Data Interface
 interface IRow {
@@ -89,7 +98,83 @@ interface Explanation {
   plugins?: string[];
 }
 
-const Table: React.FC<TableProps> = ({ data, selectedMetric, hoveredTimestamp }) => {
+// Add this new generic component
+interface DataSectionProps {
+  title: string;
+  data: { [key: string]: number | string } | string[];
+  explanations: Record<string, Explanation>;
+  onMouseEnter?: (plugins: string[]) => void;
+  onMouseLeave?: () => void;
+  highlightedPlugins?: string[];
+}
+
+const DataSection: React.FC<DataSectionProps> = ({
+  title,
+  data,
+  explanations,
+  onMouseEnter,
+  onMouseLeave,
+  highlightedPlugins = [],
+}) => (
+  <div className="flex flex-col gap-2">
+    <Title className="mb-0">{title}</Title>
+    {Array.isArray(data)
+      ? data.map((item, index) => (
+          <div key={index}>
+            <p
+              className={`p-1 rounded-md text-primary-darker font-bold ${
+                highlightedPlugins.includes(item) ? "bg-primary-lighter" : ""
+              }`}
+              onMouseEnter={() => onMouseEnter?.([item])}
+              onMouseLeave={() => onMouseLeave?.()}
+            >
+              {item}
+            </p>
+          </div>
+        ))
+      : Object.entries(data).map(([key, value]) => {
+          const hasTooltip =
+            explanations[key]?.description || explanations[key]?.plugins;
+          return (
+            <div key={key}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <div
+                    className={`p-1 rounded-md text-primary-darker ${hasTooltip ? "cursor-help" : ""} ${
+                      highlightedPlugins.some((plugin) =>
+                        explanations[key]?.plugins?.includes(plugin)
+                      )
+                        ? "bg-primary-lighter"
+                        : ""
+                    }`}
+                    onMouseEnter={() =>
+                      onMouseEnter?.(explanations[key]?.plugins || [])
+                    }
+                    onMouseLeave={() => onMouseLeave?.()}
+                  >
+                    <span className="font-bold">{key}: </span>
+                    <span>{value}</span>
+                  </div>
+                </TooltipTrigger>
+                {hasTooltip && (
+                  <TooltipContent>
+                    {explanations[key]?.description && (
+                      <p>{explanations[key].description}</p>
+                    )}
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </div>
+          );
+        })}
+  </div>
+);
+
+const DataTable: React.FC<TableProps> = ({
+  data,
+  selectedMetric,
+  hoveredTimestamp,
+}) => {
   const [rowData, setRowData] = useState<IRow[]>([]);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [cellDetails, setCellDetails] = useState<CellDetails | null>(null);
@@ -148,27 +233,21 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric, hoveredTimestamp })
       columnHelper.accessor("Component", {
         header: "Component",
         cell: ({ row, getValue }) => (
-          <div className="flex items-center">
+          <div
+            className="flex items-center cursor-pointer"
+          >
             <div
               style={{ paddingLeft: `${row.depth * 32}px` }}
               className="flex items-center gap-2"
             >
               {row.getCanExpand() ? (
-                <button
-                  {...{
-                    onClick: (e) => {
-                      e.stopPropagation();
-                      row.getToggleExpandedHandler()();
-                    },
-                    style: { cursor: "pointer" },
-                  }}
-                >
+                <span>
                   {row.getIsExpanded() ? (
                     <ChevronDown size={16} />
                   ) : (
                     <ChevronRight size={16} />
                   )}
-                </button>
+                </span>
               ) : null}
               <span>{getValue()}</span>
             </div>
@@ -181,22 +260,19 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric, hoveredTimestamp })
         cell: (info) => info.getValue().toFixed(4),
         size: 100,
       }),
-      ...timestamps.map((timestamp, index) =>
+      ...timestamps.map((_timestamp, index) =>
         columnHelper.accessor(`T${index + 1}` as const, {
           header: `T${index + 1}`,
           cell: (info) => {
             const value = info.getValue();
-            const isHighlighted = hoveredTimestamp === timestamp;
-            return (
-              <div className={isHighlighted ? 'bg-yellow-200' : ''}>
-                {value !== undefined && value !== null ? Number(value).toFixed(4) : 'N/A'}
-              </div>
-            );
+            return value !== undefined && value !== null
+              ? Number(value).toFixed(4)
+              : "N/A";
           },
         })
       ),
     ];
-  }, [data, parseYamlData, columnHelper, hoveredTimestamp]);
+  }, [data, parseYamlData, columnHelper]);
 
   const table = useReactTable({
     data: rowData,
@@ -274,186 +350,119 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric, hoveredTimestamp })
 
   useEffect(() => {
     if (hoveredTimestamp && tableRef.current) {
-      const columnIndex = timestamps.findIndex(t => t === hoveredTimestamp);
+      const columnIndex = timestamps.findIndex((t) => t === hoveredTimestamp);
       if (columnIndex !== -1) {
-        const columnElement = tableRef.current.querySelector(`th:nth-child(${columnIndex + 2})`);
+        const columnElement = tableRef.current.querySelector(
+          `th:nth-child(${columnIndex + 2})`
+        );
         if (columnElement) {
-          columnElement.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          columnElement.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+            inline: "center",
+          });
         }
       }
     }
   }, [hoveredTimestamp, timestamps]);
 
-  const isHighlighted = (key: string) => {
-    return (
-      explanations[key]?.plugins?.some((plugin) =>
-        highlightedPlugins.includes(plugin)
-      ) || false
-    );
-  };
-
   return (
     <div className="overflow-auto relative" ref={tableRef}>
       <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
         <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Cell Details</DrawerTitle>
+          <DrawerHeader className="flex flex-col bg-primary-lightest-2 justify-between">
+            <DrawerClose className="self-end">
+              <Button variant="link">
+                <XIcon size={16} />
+              </Button>
+            </DrawerClose>
+            <DrawerTitle className="text-2xl font-bold text-primary">
+              Cell Details
+            </DrawerTitle>
           </DrawerHeader>
           <ScrollArea className="h-full p-4">
             {cellDetails && (
               <TooltipProvider>
-                {/* Defaults section */}
+                {/* Use the new DataSection component for all sections */}
                 {cellDetails.defaults &&
                   Object.keys(cellDetails.defaults).length > 0 && (
                     <>
-                      <h3 className="text-lg font-semibold mb-2">Defaults</h3>
-                      {Object.entries(cellDetails.defaults).map(
-                        ([key, value]) => (
-                          <div key={key}>
-                            {explanations[key]?.description ? (
-                              <Tooltip>
-                                <TooltipTrigger>
-                                  <p>{`${key}: ${value}`}</p>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {explanations[key].description}
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <p>{`${key}: ${value}`}</p>
-                            )}
-                          </div>
-                        )
+                      <DataSection
+                        title="Defaults"
+                        data={cellDetails.defaults}
+                        explanations={explanations}
+                        onMouseEnter={setHighlightedPlugins}
+                        onMouseLeave={() => setHighlightedPlugins([])}
+                        highlightedPlugins={highlightedPlugins}
+                      />
+                      {(cellDetails.inputs ||
+                        cellDetails.pipeline ||
+                        cellDetails.outputs) && (
+                        <hr className="my-4 border-t border-gray-200" />
                       )}
                     </>
                   )}
 
-                {/* Inputs section */}
                 {cellDetails.inputs &&
                   Object.keys(cellDetails.inputs).length > 0 && (
                     <>
-                      <h3 className="text-lg font-semibold mb-2">Inputs</h3>
-                      {Object.entries(cellDetails.inputs).map(
-                        ([key, value]) => (
-                          <div key={key}>
-                            {explanations[key]?.description ||
-                            explanations[key]?.plugins ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <p
-                                    className={`cursor-help ${
-                                      isHighlighted(key) ? "bg-primary/50" : ""
-                                    }`}
-                                    onMouseEnter={() =>
-                                      setHighlightedPlugins(
-                                        explanations[key]?.plugins || []
-                                      )
-                                    }
-                                    onMouseLeave={() =>
-                                      setHighlightedPlugins([])
-                                    }
-                                  >{`${key}: ${value}`}</p>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {explanations[key]?.description && (
-                                    <p>{explanations[key].description}</p>
-                                  )}
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <p>{`${key}: ${value}`}</p>
-                            )}
-                          </div>
-                        )
+                      <DataSection
+                        title="Inputs"
+                        data={cellDetails.inputs}
+                        explanations={explanations}
+                        onMouseEnter={setHighlightedPlugins}
+                        onMouseLeave={() => setHighlightedPlugins([])}
+                        highlightedPlugins={highlightedPlugins}
+                      />
+                      {(cellDetails.pipeline || cellDetails.outputs) && (
+                        <hr className="my-4 border-t border-gray-200" />
                       )}
                     </>
                   )}
 
-                {/* Pipeline section */}
                 {cellDetails.pipeline && cellDetails.pipeline.length > 0 && (
                   <>
-                    <h3 className="text-lg font-semibold mt-4 mb-2">
-                      Pipeline
-                    </h3>
-                    {cellDetails.pipeline.map((step, index) => (
-                      <div key={index}>
-                        <p
-                          className={`cursor-pointer ${
-                            highlightedPlugins.includes(step)
-                              ? "bg-primary/50"
-                              : ""
-                          }`}
-                          onMouseEnter={() => setHighlightedPlugins([step])}
-                          onMouseLeave={() => setHighlightedPlugins([])}
-                        >
-                          {step}
-                        </p>
-                      </div>
-                    ))}
+                    <DataSection
+                      title="Pipeline"
+                      data={cellDetails.pipeline}
+                      explanations={explanations}
+                      onMouseEnter={setHighlightedPlugins}
+                      onMouseLeave={() => setHighlightedPlugins([])}
+                      highlightedPlugins={highlightedPlugins}
+                    />
+                    {cellDetails.outputs &&
+                      Object.keys(cellDetails.outputs).length > 0 && (
+                        <hr className="my-4 border-t border-gray-200" />
+                      )}
                   </>
                 )}
 
-                {/* Outputs section */}
                 {cellDetails.outputs &&
                   Object.keys(cellDetails.outputs).length > 0 && (
-                    <>
-                      <h3 className="text-lg font-semibold mt-4 mb-2 ">
-                        Outputs
-                      </h3>
-                      {Object.entries(cellDetails.outputs).map(
-                        ([key, value]) => (
-                          <div key={key}>
-                            {explanations[key]?.description ||
-                            explanations[key]?.plugins ? (
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <p
-                                    className={`cursor-help ${
-                                      isHighlighted(key) ? "bg-primary/50" : ""
-                                    }`}
-                                    onMouseEnter={() =>
-                                      setHighlightedPlugins(
-                                        explanations[key]?.plugins || []
-                                      )
-                                    }
-                                    onMouseLeave={() =>
-                                      setHighlightedPlugins([])
-                                    }
-                                  >{`${key}: ${value}`}</p>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  {explanations[key]?.description && (
-                                    <p>{explanations[key].description}</p>
-                                  )}
-                                </TooltipContent>
-                              </Tooltip>
-                            ) : (
-                              <p>{`${key}: ${value}`}</p>
-                            )}
-                          </div>
-                        )
-                      )}
-                    </>
+                    <DataSection
+                      title="Outputs"
+                      data={cellDetails.outputs}
+                      explanations={explanations}
+                      onMouseEnter={setHighlightedPlugins}
+                      onMouseLeave={() => setHighlightedPlugins([])}
+                      highlightedPlugins={highlightedPlugins}
+                    />
                   )}
               </TooltipProvider>
             )}
           </ScrollArea>
-          <DrawerFooter>
-            <DrawerClose>Close</DrawerClose>
-          </DrawerFooter>
         </DrawerContent>
       </Drawer>
-
-      <table className="w-full border-collapse">
-        <thead>
+      <Table>
+        <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
+            <TableRow key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
-                <th
+                <TableHead
                   key={header.id}
-                  className={`border whitespace-nowrap p-2 ${
+                  className={`whitespace-nowrap ${
                     header.id === "Component"
-                      ? "sticky left-0 z-10 bg-white"
+                      ? "sticky left-0 z-10 bg-primary-lightest-2 drop-shadow-md"
                       : ""
                   }`}
                 >
@@ -461,37 +470,47 @@ const Table: React.FC<TableProps> = ({ data, selectedMetric, hoveredTimestamp })
                     header.column.columnDef.header,
                     header.getContext()
                   )}
-                </th>
+                </TableHead>
               ))}
-            </tr>
+            </TableRow>
           ))}
-        </thead>
-        <tbody>
+        </TableHeader>
+        <TableBody>
           {table.getRowModel().rows.map((row) => (
-            <tr key={row.id}>
-              {row.getVisibleCells().map((cell) => (
-                <td
-                  key={cell.id}
-                  className={`border whitespace-nowrap p-2 cursor-pointer hover:bg-gray-100 ${
-                    cell.column.id === "Component"
-                      ? "sticky left-0 z-10 bg-white"
-                      : ""
-                  }`}
-                  onClick={() => {
-                    if (cell.column.id !== "expander") {
-                      handleCellClick(row.original, cell.column.id);
-                    }
-                  }}
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
+            <TableRow key={row.id}>
+              {row.getVisibleCells().map((cell) => {
+                const isHighlighted =
+                  cell.column.id !== "Component" &&
+                  cell.column.id !== "Total" &&
+                  hoveredTimestamp ===
+                    timestamps[parseInt(cell.column.id.slice(1)) - 1];
+
+                return (
+                  <TableCell
+                    key={cell.id}
+                    className={`whitespace-nowrap cursor-pointer hover:bg-gray-100 ${
+                      cell.column.id === "Component"
+                        ? "sticky left-0 z-10 bg-secondary-lightest-1 drop-shadow-md font-bold text-primary-dark"
+                        : ""
+                    } ${isHighlighted ? "bg-primary-lighter font-bold" : ""}`}
+                    onClick={() => {
+                      if (cell.column.id === "Component") {
+                        row.getToggleExpandedHandler()();
+                      } else {
+                        handleCellClick(row.original, cell.column.id);
+                      }
+                    }}
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </TableCell>
+                );
+              })}
+            </TableRow>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 };
 
-export default Table;
+export default DataTable;

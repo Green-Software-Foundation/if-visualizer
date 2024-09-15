@@ -1,6 +1,13 @@
 import React, { useMemo } from "react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
-
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+} from "recharts";
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 interface AggregatedData {
   [key: string]: number;
 }
@@ -70,23 +77,30 @@ const Chart: React.FC<ChartProps> = ({ data, selectedMetric, onHover }) => {
   };
 
   return (
-    <ResponsiveContainer width="100%" height={400}>
-      <LineChart 
-        data={chartData} 
+    <ChartContainer config={{}} className="h-[400px] w-full">
+      <LineChart
+        data={chartData}
         margin={{ top: 20, right: 30, left: 20, bottom: 10 }}
         onMouseMove={handleMouseMove}
         onMouseLeave={handleMouseLeave}
-        
       >
         <CartesianGrid strokeDasharray="3 3" />
         <XAxis
           dataKey="timestamp"
-          label={{ value: "Timestamp", position: "insideBottom", offset: -10 }}
+          label={{
+            value: "Timestamp",
+            position: "insideBottom",
+            offset: -10,
+          }}
         />
         <YAxis
-          label={{ value: selectedMetric, angle: -90, position: "insideLeft" }}
+          label={{
+            value: selectedMetric,
+            angle: -90,
+            position: "insideLeft",
+          }}
         />
-        <Tooltip />
+        <Tooltip content={<ChartTooltipContent />} />
         <Line
           type="monotone"
           dataKey="value"
@@ -95,7 +109,7 @@ const Chart: React.FC<ChartProps> = ({ data, selectedMetric, onHover }) => {
           strokeWidth={2}
         />
       </LineChart>
-    </ResponsiveContainer>
+    </ChartContainer>
   );
 };
 
