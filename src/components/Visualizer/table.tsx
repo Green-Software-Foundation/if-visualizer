@@ -9,14 +9,6 @@ import {
 } from "@tanstack/react-table";
 import type { ExpandedState } from "@tanstack/react-table";
 import {
-  Drawer,
-  DrawerClose,
-  DrawerContent,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
   Table,
   TableBody,
   TableCell,
@@ -24,15 +16,15 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronRight, ChevronDown, XIcon, EyeIcon } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import Title from "@/components/title";
+import { ChevronRight, ChevronDown, EyeIcon } from "lucide-react";
 
 interface IRow {
   Component: string;
   Total: number;
   subRows?: IRow[];
-  [key: string]: string | number | boolean | undefined | IRow[];
+  node?: TreeNode;
+  path?: string[];
+  [key: string]: string | number | boolean | undefined | IRow[] | TreeNode | string[];
 }
 
 interface OutputData {
@@ -61,35 +53,32 @@ interface YAMLData {
   explainer: boolean;
 }
 
-interface CellDetails {
-  inputs: { [key: string]: number | string };
-  outputs: { [key: string]: number | string };
-  pipeline: string[];
-  defaults: { [key: string]: number | string };
+interface SelectedNode {
+  name: string;
+  path: string[];
+  data?: any;
 }
 
 interface TableProps {
   data: YAMLData | null;
   selectedMetric: string;
   hoveredTimestamp: string | null;
-  highlightedComponent: string;
-  onViewComponent: (path: string[]) => void; // Add this new prop
+  selectedNode: SelectedNode | null;
+  onNodeSelect: (nodeName: string, path: string[], nodeData?: any) => void;
 }
+
+const columnHelper = createColumnHelper<IRow>();
 
 const DataTable: React.FC<TableProps> = ({
   data,
   selectedMetric,
   hoveredTimestamp,
-  highlightedComponent,
-  onViewComponent,
+  selectedNode,
+  onNodeSelect,
 }) => {
   const [rowData, setRowData] = useState<IRow[]>([]);
-  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [cellDetails, setCellDetails] = useState<CellDetails | null>(null);
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
   const [timestamps, setTimestamps] = useState<string[]>([]);
-
-  const columnHelper = createColumnHelper<IRow>();
 
   const parseYamlData = useCallback(
     (data: YAMLData) => {
@@ -99,6 +88,8 @@ const DataTable: React.FC<TableProps> = ({
           Component: path[path.length - 1] || "root",
           Total: 0,
           subRows: [],
+          node: node,
+          path: path,
         };
 
         outputs.forEach((output, index) => {
@@ -127,42 +118,18 @@ const DataTable: React.FC<TableProps> = ({
     [selectedMetric]
   );
 
-  const findNodeInTree = useCallback(
-    (tree: TreeNode, path: string[]): TreeNode | null => {
-      let current = tree;
-      for (const component of path) {
-        if (!current.children?.[component]) return null;
-        current = current.children[component];
-      }
-      return current;
-    },
-    []
-  );
-
-  const showDrawer = useCallback(
-    (nodePath: string[]) => {
-      if (!data) return;
-
-      const node = findNodeInTree(data.tree, nodePath);
-      if (!node) return;
-
-      setCellDetails({
-        inputs: node.inputs?.[0] || {},
-        outputs: node.outputs?.[0] || {},
-        pipeline: node.pipeline?.compute || [],
-        defaults: node.defaults || {},
-      });
-      setIsDrawerOpen(true);
-    },
-    [data, findNodeInTree]
-  );
-
   const getComponentPath = useCallback((componentName: string): string[] => {
     const findPath = (rows: IRow[], target: string, currentPath: string[] = []): string[] => {
       for (const row of rows) {
-        if (row.Component === target) return [...currentPath, target];
+        // Skip adding 'root' to the path
+        const newPath = row.Component === 'root' ? [] : [...currentPath, row.Component];
+        
+        if (row.Component === target) {
+          return row.Component === 'root' ? [] : newPath;
+        }
+        
         if (row.subRows) {
-          const found = findPath(row.subRows, target, [...currentPath, row.Component]);
+          const found = findPath(row.subRows, target, newPath);
           if (found.length > 0) return found;
         }
       }
@@ -173,7 +140,7 @@ const DataTable: React.FC<TableProps> = ({
   }, [rowData]);
 
   const columns = useMemo(() => {
-   if (!data) return [];
+    if (!data) return [];
 
     const { timestamps } = parseYamlData(data);
     return [
@@ -181,11 +148,11 @@ const DataTable: React.FC<TableProps> = ({
         header: "Component",
         cell: ({ row, getValue }) => {
           const value = getValue();
-          const isHighlighted = value === highlightedComponent;
+          const isSelected = value === selectedNode?.name;
           
           return (
             <div className={`flex items-center gap-2 ${
-              isHighlighted ? "text-primary font-bold" : ""
+              isSelected ? "text-primary font-bold" : ""
             }`}>
               <div style={{ paddingLeft: `${row.depth * 32}px` }} className="flex items-center gap-2">
                 {row.getCanExpand() ? (
@@ -203,8 +170,7 @@ const DataTable: React.FC<TableProps> = ({
                     )}
                   </button>
                 ) : (
-                  // Add padding to align with rows that have chevrons
-                  <div className="w-[24px]" /> 
+                  <div className="w-[24px]" />
                 )}
                 <span>{value}</span>
               </div>
@@ -212,7 +178,7 @@ const DataTable: React.FC<TableProps> = ({
                 onClick={(e) => {
                   e.stopPropagation();
                   const path = getComponentPath(value as string);
-                  onViewComponent(path);
+                  onNodeSelect(value as string, path, row.original.node);
                 }}
                 className="ml-2 hover:bg-gray-100 rounded p-1"
                 title="View in pie chart"
@@ -241,7 +207,7 @@ const DataTable: React.FC<TableProps> = ({
         })
       ),
     ];
-  }, [data, parseYamlData, columnHelper, highlightedComponent, getComponentPath, onViewComponent]);
+  }, [data, parseYamlData, columnHelper, selectedNode, getComponentPath, onNodeSelect]);
 
   const table = useReactTable({
     data: rowData,
@@ -264,9 +230,9 @@ const DataTable: React.FC<TableProps> = ({
     }
   }, [data, selectedMetric, parseYamlData]);
 
-  // Auto-expand rows to show highlighted component
+  // Auto-expand rows to show selected component
   useEffect(() => {
-    if (highlightedComponent && data) {
+    if (selectedNode?.name && data) {
       const expandPath = (rows: IRow[], target: string): boolean => {
         for (const row of rows) {
           if (row.Component === target) return true;
@@ -284,78 +250,13 @@ const DataTable: React.FC<TableProps> = ({
         return false;
       };
 
-      expandPath(rowData, highlightedComponent);
+      expandPath(rowData, selectedNode.name);
     }
-  }, [highlightedComponent, rowData, data]);
+  }, [selectedNode, rowData, data]);
 
   return (
     <div className="overflow-auto">
-      <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-        <DrawerContent>
-          <DrawerHeader>
-            <DrawerTitle>Component Details</DrawerTitle>
-            <DrawerClose>
-              <Button variant="ghost">
-                <XIcon size={16} />
-              </Button>
-            </DrawerClose>
-          </DrawerHeader>
-          <ScrollArea className="h-[80vh] p-4">
-            {cellDetails && (
-              <div className="space-y-4">
-                {Object.keys(cellDetails.defaults).length > 0 && (
-                  <div>
-                    <Title>Defaults</Title>
-                    {Object.entries(cellDetails.defaults).map(([key, value]) => (
-                      <div key={key} className="p-1">
-                        <span className="font-bold">{key}: </span>
-                        <span>{value}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {Object.keys(cellDetails.inputs).length > 0 && (
-                  <div>
-                    <Title>Inputs</Title>
-                    {Object.entries(cellDetails.inputs).map(([key, value]) => (
-                      <div key={key} className="p-1">
-                        <span className="font-bold">{key}: </span>
-                        <span>{value}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {cellDetails.pipeline.length > 0 && (
-                  <div>
-                    <Title>Pipeline</Title>
-                    {cellDetails.pipeline.map((item, index) => (
-                      <div key={index} className="p-1">
-                        {item}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {Object.keys(cellDetails.outputs).length > 0 && (
-                  <div>
-                    <Title>Outputs</Title>
-                    {Object.entries(cellDetails.outputs).map(([key, value]) => (
-                      <div key={key} className="p-1">
-                        <span className="font-bold">{key}: </span>
-                        <span>{value}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
-          </ScrollArea>
-        </DrawerContent>
-      </Drawer>
-
-     <Table>
+      <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
             <TableRow key={headerGroup.id}>
@@ -381,7 +282,11 @@ const DataTable: React.FC<TableProps> = ({
           {table.getRowModel().rows.map((row) => (
             <TableRow 
               key={row.id}
-              className={row.original.Component === highlightedComponent ? "bg-primary-lighter" : ""}
+              className={row.original.Component === selectedNode?.name ? "bg-primary-lighter" : ""}
+              onClick={() => {
+                const path = getComponentPath(row.original.Component);
+                onNodeSelect(row.original.Component, path, row.original.node);
+              }}
             >
               {row.getVisibleCells().map((cell) => {
                 const isHighlighted =
@@ -398,11 +303,6 @@ const DataTable: React.FC<TableProps> = ({
                         ? "sticky left-0 z-10 bg-secondary-lightest-1 drop-shadow-md font-bold text-primary-dark"
                         : "hover:bg-gray-100 cursor-pointer"
                     } ${isHighlighted ? "bg-primary-lighter font-bold" : ""}`}
-                    onClick={() => {
-                      if (cell.column.id !== "Component" && !row.original.subRows?.length) {
-                        showDrawer([row.original.Component]);
-                      }
-                    }}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>

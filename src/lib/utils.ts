@@ -66,7 +66,6 @@ export const generateColorScale = (count: number, {
 
     colors.push(`hsl(${hue} ${Math.round(newSaturation)}% ${Math.round(newLightness)}%)`);
   }
-  console.log("🚀 ~ colors:", colors)
 
   return colors;
 };

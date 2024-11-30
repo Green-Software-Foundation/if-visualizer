@@ -76,6 +76,12 @@ interface CellDetails {
   };
 }
 
+interface SelectedNode {
+  name: string;
+  path: string[];
+  data?: any;
+}
+
 const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
   const [data, setData] = useState<YAMLData | null>(null);
   const [rawFile, setRawFile] = useState<string>("");
@@ -85,8 +91,7 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
   const [hoveredTimestamp, setHoveredTimestamp] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [cellDetails, setCellDetails] = useState<CellDetails | null>(null);
-  const [selectedPath, setSelectedPath] = useState<string[]>([]);
-  const [highlightedComponent, setHighlightedComponent] = useState<string>("");
+  const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
   const tableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -121,12 +126,9 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
     setSelectedMetric(metric);
   };
 
-  const handleChartHover = (timestamp: string | null) => {
-    setHoveredTimestamp(timestamp);
-  };
-
-  const handleNodeClick = (nodeName: string, nodeData: TreeNode) => {
-    if (!nodeData.children) {
+  const handleNodeSelect = (nodeName: string, nodePath: string[], nodeData?: any) => {
+    
+    if (nodeData && !nodeData.children) {
       // It's a leaf node, show the drawer
       setCellDetails({
         inputs: nodeData.inputs?.[0] || {},
@@ -135,14 +137,10 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
         defaults: nodeData.defaults || {},
       });
       setIsDrawerOpen(true);
-    }
-    setHighlightedComponent(nodeName);
-  };
+    }else{
+      setSelectedNode({ name: nodeName, path: nodePath, data: nodeData });
 
-  const handlePathChange = (newPath: string[]) => {
-    setSelectedPath(newPath);
-    // Update highlighted component based on current path
-    setHighlightedComponent(newPath[newPath.length - 1] || "root");
+    }
   };
 
   const getTotalForMetric = (metric: string) => {
@@ -156,10 +154,6 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
     return "";
   };
 
-  const handleViewComponent = (componentPath: string[]) => {
-    setSelectedPath(componentPath);
-    setHighlightedComponent(componentPath[componentPath.length - 1]);
-  };
   return (
     <div className="py-10">
       <Card className="bg-primary-foreground text-center">
@@ -254,6 +248,52 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
                 {cellDetails && (
                   <div className="p-4">
                     {/* Add your drawer content here */}
+                    {Object.keys(cellDetails.defaults).length > 0 && (
+                      <div>
+                        <Title>Defaults</Title>
+                        {Object.entries(cellDetails.defaults).map(([key, value]) => (
+                          <div key={key} className="p-1">
+                            <span className="font-bold">{key}: </span>
+                            <span>{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    
+                    {Object.keys(cellDetails.inputs).length > 0 && (
+                      <div>
+                        <Title>Inputs</Title>
+                        {Object.entries(cellDetails.inputs).map(([key, value]) => (
+                          <div key={key} className="p-1">
+                            <span className="font-bold">{key}: </span>
+                            <span>{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {cellDetails.pipeline.length > 0 && (
+                      <div>
+                        <Title>Pipeline</Title>
+                        {cellDetails.pipeline.map((item, index) => (
+                          <div key={index} className="p-1">
+                            {item}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {Object.keys(cellDetails.outputs).length > 0 && (
+                      <div>
+                        <Title>Outputs</Title>
+                        {Object.entries(cellDetails.outputs).map(([key, value]) => (
+                          <div key={key} className="p-1">
+                            <span className="font-bold">{key}: </span>
+                            <span>{value}</span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 )}
               </ScrollArea>
@@ -266,8 +306,8 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
               <DrilldownPieChart
                 data={data}
                 selectedMetric={selectedMetric}
-                onNodeClick={handleNodeClick}
-                onPathChange={handlePathChange}
+                selectedNode={selectedNode}
+                onNodeSelect={handleNodeSelect}
               />
             </section>
 
@@ -278,8 +318,8 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
                   data={data}
                   selectedMetric={selectedMetric}
                   hoveredTimestamp={hoveredTimestamp}
-                  highlightedComponent={highlightedComponent}
-                  onViewComponent={handleViewComponent}
+                  selectedNode={selectedNode}
+                  onNodeSelect={handleNodeSelect}
                 />
               </div>
             </section>

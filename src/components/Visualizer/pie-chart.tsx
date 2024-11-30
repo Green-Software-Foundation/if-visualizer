@@ -2,170 +2,209 @@ import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, Sector, ResponsiveContainer } from 'recharts';
 import { Button } from "@/components/ui/button";
 import { ChevronLeft } from "lucide-react";
-import { generateColorScale } from "@/lib/utils"
-interface DrilldownPieChartProps {
-    data: any;
-    selectedMetric: string;
-    onNodeClick: (nodeName: string, nodeData: any) => void;
-    onPathChange: (path: string[]) => void;
+import { generateColorScale } from "@/lib/utils";
+
+interface TreeNode {
+  children?: { [key: string]: TreeNode };
+  outputs?: {
+    [key: string]: string | number;
+  }[];
+  inputs?: {
+    [key: string]: string | number;
+  }[];
+  pipeline?: { compute: string[] };
+  defaults?: { [key: string]: number | string };
 }
 
+interface YAMLData {
+  tree: TreeNode;
+  explain: {
+    [key: string]: {
+      plugins?: string[];
+      unit?: string;
+      description: string;
+      "aggregation-method"?: string;
+    };
+  };
+  explainer: boolean;
+}
+
+interface ChartData {
+  name: string;
+  value: number;
+  children?: { [key: string]: TreeNode };
+  node: TreeNode;
+  path: string[];
+  isLeaf: boolean;
+}
+
+interface SelectedNode {
+  name: string;
+  path: string[];
+  data?: any;
+}
+
+interface DrilldownPieChartProps {
+  data: YAMLData | null;
+  selectedMetric: string;
+  selectedNode: SelectedNode | null;
+  onNodeSelect: (nodeName: string, path: string[], nodeData?: any) => void;
+}
 
 const renderActiveShape = (props: any) => {
-    const {
-        cx,
-        cy,
-        innerRadius,
-        outerRadius,
-        startAngle,
-        endAngle,
-        fill,
-        payload,
-        value,
-    } = props;
+  const {
+    cx,
+    cy,
+    innerRadius,
+    outerRadius,
+    startAngle,
+    endAngle,
+    fill,
+    payload,
+    value,
+  } = props;
 
-    return (
-        <g>
-            <text x={cx} y={cy} dy={-20} textAnchor="middle" fill="#888">
-                {payload.name}
-            </text>
-            <text x={cx} y={cy} dy={8} textAnchor="middle" fill="#333" fontSize="16px">
-                {value.toFixed(4)}
-            </text>
-            <Sector
-                cx={cx}
-                cy={cy}
-                innerRadius={innerRadius}
-                outerRadius={outerRadius + 8}
-                startAngle={startAngle}
-                endAngle={endAngle}
-                fill={fill}
-            />
-        </g>
-    );
+  return (
+    <g>
+      <text x={cx} y={cy} dy={-20} textAnchor="middle" fill="#888">
+        {payload.name}
+      </text>
+      <text x={cx} y={cy} dy={8} textAnchor="middle" fill="#333" fontSize="16px">
+        {value.toFixed(4)}
+      </text>
+      <Sector
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius + 8}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+      />
+    </g>
+  );
 };
 
 const DrilldownPieChart: React.FC<DrilldownPieChartProps> = ({
-    data,
-    selectedMetric,
-    onNodeClick,
-    onPathChange
+  data,
+  selectedMetric,
+  selectedNode,
+  onNodeSelect
 }) => {
-    const [activeIndex, setActiveIndex] = useState<number | null>(null);
-    const [path, setPath] = useState<string[]>([]);
-    const [currentData, setCurrentData] = useState<any[]>([]);
+  const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const [currentData, setCurrentData] = useState<ChartData[]>([]);
 
-    // Transform tree data for pie chart
-    const transformData = (node: any, currentPath: string[] = []) => {
-        if (!node) return [];
+  // Transform tree data for pie chart
+  const transformData = (node: TreeNode, currentPath: string[] = []): ChartData[] => {
+    if (!node) return [];
 
-        const nodeData = node.children
-            ? Object.entries(node.children).map(([name, childNode]: [string, any]) => ({
-                name,
-                value: childNode.outputs?.[0]?.[selectedMetric] || 0,
-                children: childNode.children,
-                isLeaf: !childNode.children,
-                node: childNode,
-                path: [...currentPath, name]
-            }))
-            : [];
+    const nodeData = node.children
+      ? Object.entries(node.children).map(([name, childNode]): ChartData => ({
+          name,
+          value: typeof childNode.outputs?.[0]?.[selectedMetric] === 'number' 
+            ? childNode.outputs[0][selectedMetric] 
+            : parseFloat(childNode.outputs?.[0]?.[selectedMetric] as string) || 0,
+          children: childNode.children,
+          isLeaf: !childNode.children,
+          node: childNode,
+          path: [...currentPath, name]
+        }))
+      : [];
 
-        // Sort by value in descending order
-        return nodeData.sort((a, b) => b.value - a.value);
-    };
+    // Sort by value in descending order
+    return nodeData.sort((a, b) => b.value - a.value);
+  };
 
-    useEffect(() => {
-        if (data?.tree) {
-            let currentNode = data.tree;
-            // Navigate to current path
-            for (const nodeName of path) {
-                if (currentNode.children?.[nodeName]) {
-                    currentNode = currentNode.children[nodeName];
-                } else {
-                    // Reset path if invalid
-                    setPath([]);
-                    currentNode = data.tree;
-                    break;
-                }
-            }
-            const newData = transformData(currentNode, path);
-            setCurrentData(newData);
+  useEffect(() => {
+    if (data?.tree) {
+      let currentNode = data.tree;
+      const currentPath: string[] = [];
+      
+      // Navigate to current path
+      if (selectedNode?.path) {
+        for (const nodeName of selectedNode.path) {
+          if (currentNode.children?.[nodeName]) {
+            currentNode = currentNode.children[nodeName];
+            currentPath.push(nodeName);
+          } else {
+            break;
+          }
         }
-    }, [data, path, selectedMetric]);
+      }
+      
+      const newData = transformData(currentNode, currentPath);
+      setCurrentData(newData);
+    }
+  }, [data, selectedNode, selectedMetric]);
 
-    const handleClick = (entry: any) => {
-        if (entry.isLeaf) {
-            // If it's a leaf node, show the flyout
-            onNodeClick(entry.name, entry.node);
-        } else {
-            // If it has children, drill down
-            const newPath = [...path, entry.name];
-            setPath(newPath);
-            onPathChange(newPath);
-        }
-    };
+  const handleClick = (entry: ChartData) => {
+    onNodeSelect(entry.name, entry.path, entry.node);
+  };
 
-    const handleBack = () => {
-        if (path.length === 0) return;
+  const handleBack = () => {
+    if (!selectedNode?.path.length) return;
+    
+    const newPath = selectedNode.path.slice(0, -1);
+    const parentName = newPath[newPath.length - 1] || 'root';
+    onNodeSelect(parentName, newPath);
+  };
 
-        const newPath = path.slice(0, -1);
-        setPath(newPath);
-        onPathChange(newPath);
-        setActiveIndex(null);
-    };
+  // Calculate total value for percentage
+  const totalValue = currentData.reduce((sum, item) => sum + item.value, 0);
+  const COLORS = generateColorScale(currentData.length, {});
 
-    // Calculate total value for percentage
-    const totalValue = currentData.reduce((sum, item) => sum + item.value, 0);
-    const COLORS = generateColorScale(currentData.length, {})
-
-    return (
-        <div className="w-full h-[400px] relative">
-            {path.length > 0 && (
-                <Button
-                    variant="ghost"
-                    className="absolute top-0 left-0 z-10"
-                    onClick={handleBack}
-                >
-                    <ChevronLeft className="h-4 w-4 mr-2" />
-                    Back to {path[path.length - 2] || 'Root'}
-                </Button>
-            )}
-            <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                    <Pie
-                        activeIndex={activeIndex !== null ? activeIndex : undefined}
-                        activeShape={renderActiveShape}
-                        data={currentData}
-                        cx="50%"
-                        cy="50%"
-                        innerRadius={80}
-                        outerRadius={150}
-                        dataKey="value"
-                        onMouseEnter={(_, index) => setActiveIndex(index)}
-                        onMouseLeave={() => setActiveIndex(null)}
-                        onClick={(entry) => handleClick(entry)}
-                        label={({ name, value }) => `${name}: ${value.toFixed(2)}`}
-                    >
-                        {currentData.map((entry, index) => (
-                            <Cell
-                                key={`cell-${index}`}
-                                fill={COLORS[index]}
-                                className="cursor-pointer"
-                            />
-                        ))}
-                    </Pie>
-                </PieChart>
-            </ResponsiveContainer>
-            <div className="absolute bottom-0 left-0 right-0 text-center text-sm text-gray-500">
-                <div>{path.length > 0 ? `Current: ${path.join(' > ')}` : 'Root Level'}</div>
-                <div className="text-xs mt-1">
-                    {activeIndex !== null && currentData[activeIndex] ?
-                        `${currentData[activeIndex].name}: ${((currentData[activeIndex].value / totalValue) * 100).toFixed(1)}%`
-                        : 'Hover over slices to see details'}
-                </div>
-            </div>
+  return (
+    <div className="w-full h-[400px] relative">
+      {selectedNode !== null && selectedNode?.path.length > 0 && (
+        <Button
+          variant="ghost"
+          className="absolute top-0 left-0 z-10"
+          onClick={handleBack}
+        >
+          <ChevronLeft className="h-4 w-4 mr-2" />
+          Back to {selectedNode.path[selectedNode.path.length - 2] || 'Root'}
+        </Button>
+      )}
+      <ResponsiveContainer width="100%" height="100%">
+        <PieChart>
+          <Pie
+            activeIndex={activeIndex !== null ? activeIndex : undefined}
+            activeShape={renderActiveShape}
+            data={currentData}
+            cx="50%"
+            cy="50%"
+            innerRadius={80}
+            outerRadius={150}
+            dataKey="value"
+            onMouseEnter={(_, index) => setActiveIndex(index)}
+            onMouseLeave={() => setActiveIndex(null)}
+            onClick={(_, index) => handleClick(currentData[index])}
+            label={({ name, value }) => `${name}: ${value.toFixed(2)}`}
+          >
+            {currentData.map((_, index) => (
+              <Cell
+                key={`cell-${index}`}
+                fill={COLORS[index]}
+                className="cursor-pointer"
+              />
+            ))}
+          </Pie>
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="absolute bottom-0 left-0 right-0 text-center text-sm text-gray-500">
+        <div>
+          {selectedNode !== null && selectedNode?.path.length > 0 
+            ? `Current: ${selectedNode.path.join(' > ')}` 
+            : 'Root Level'}
         </div>
-    );
+        <div className="text-xs mt-1">
+          {activeIndex !== null && currentData[activeIndex] 
+            ? `${currentData[activeIndex].name}: ${((currentData[activeIndex].value / totalValue) * 100).toFixed(1)}%`
+            : 'Hover over slices to see details'}
+        </div>
+      </div>
+    </div>
+  );
 };
 
 export default DrilldownPieChart;
