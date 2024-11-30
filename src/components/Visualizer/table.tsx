@@ -24,7 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ChevronRight, ChevronDown, XIcon, Eye } from "lucide-react";
+import { ChevronRight, ChevronDown, XIcon, EyeIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Title from "@/components/title";
 
@@ -217,7 +217,7 @@ const DataTable: React.FC<TableProps> = ({
                 className="ml-2 hover:bg-gray-100 rounded p-1"
                 title="View in pie chart"
               >
-                <Eye size={16} />
+                <EyeIcon size={16} />
               </button>
             </div>
           );
