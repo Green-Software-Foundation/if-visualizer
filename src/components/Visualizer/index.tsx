@@ -145,9 +145,9 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
 
   const getTotalForMetric = (metric: string) => {
     if (data && data.tree && data.tree.aggregated) {
-      const total = data.tree.aggregated[metric];
-      if (total !== undefined) {
-        const unit = data.explain[metric]?.unit || "";
+      const total = data?.tree?.aggregated[metric];
+      if (total !== undefined && data.explain) {
+        const unit = data?.explain[metric]?.unit || "";
         return `${total.toFixed(3)} ${unit}`;
       }
     }
