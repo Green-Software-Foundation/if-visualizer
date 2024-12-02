@@ -195,17 +195,17 @@ const DataTable: React.FC<TableProps> = ({
         cell: (info) => info.getValue().toFixed(4),
         size: 100,
       }),
-      ...timestamps.map((_timestamp, index) =>
-        columnHelper.accessor(`T${index + 1}` as const, {
-          header: `T${index + 1}`,
-          cell: (info) => {
-            const value = info.getValue();
-            return value !== undefined && value !== null
-              ? Number(value).toFixed(4)
-              : "N/A";
-          },
-        })
-      ),
+      // ...timestamps.map((_timestamp, index) =>
+      //   columnHelper.accessor(`T${index + 1}` as const, {
+      //     header: `T${index + 1}`,
+      //     cell: (info) => {
+      //       const value = info.getValue();
+      //       return value !== undefined && value !== null
+      //         ? Number(value).toFixed(4)
+      //         : "N/A";
+      //     },
+      //   })
+      // ),
     ];
   }, [data, parseYamlData, columnHelper, selectedNode, getComponentPath, onNodeSelect]);
 

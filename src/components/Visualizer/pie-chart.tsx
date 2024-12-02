@@ -60,28 +60,17 @@ const renderActiveShape = (props: any) => {
     startAngle,
     endAngle,
     fill,
-    payload,
-    value,
   } = props;
-
   return (
-    <g>
-      <text x={cx} y={cy} dy={-20} textAnchor="middle" fill="#888">
-        {payload.name}
-      </text>
-      <text x={cx} y={cy} dy={8} textAnchor="middle" fill="#333" fontSize="16px">
-        {value.toFixed(4)}
-      </text>
-      <Sector
-        cx={cx}
-        cy={cy}
-        innerRadius={innerRadius}
-        outerRadius={outerRadius + 8}
-        startAngle={startAngle}
-        endAngle={endAngle}
-        fill={fill}
-      />
-    </g>
+    <Sector
+      cx={cx}
+      cy={cy}
+      innerRadius={innerRadius}
+      outerRadius={outerRadius + 8}
+      startAngle={startAngle}
+      endAngle={endAngle}
+      fill={fill}
+    />
   );
 };
 
@@ -100,15 +89,15 @@ const DrilldownPieChart: React.FC<DrilldownPieChartProps> = ({
 
     const nodeData = node.children
       ? Object.entries(node.children).map(([name, childNode]): ChartData => ({
-          name,
-          value: typeof childNode.outputs?.[0]?.[selectedMetric] === 'number' 
-            ? childNode.outputs[0][selectedMetric] 
-            : parseFloat(childNode.outputs?.[0]?.[selectedMetric] as string) || 0,
-          children: childNode.children,
-          isLeaf: !childNode.children,
-          node: childNode,
-          path: [...currentPath, name]
-        }))
+        name,
+        value: typeof childNode.outputs?.[0]?.[selectedMetric] === 'number'
+          ? childNode.outputs[0][selectedMetric]
+          : parseFloat(childNode.outputs?.[0]?.[selectedMetric] as string) || 0,
+        children: childNode.children,
+        isLeaf: !childNode.children,
+        node: childNode,
+        path: [...currentPath, name]
+      }))
       : [];
 
     // Sort by value in descending order
@@ -119,7 +108,7 @@ const DrilldownPieChart: React.FC<DrilldownPieChartProps> = ({
     if (data?.tree) {
       let currentNode = data.tree;
       const currentPath: string[] = [];
-      
+
       // Navigate to current path
       if (selectedNode?.path) {
         for (const nodeName of selectedNode.path) {
@@ -131,7 +120,7 @@ const DrilldownPieChart: React.FC<DrilldownPieChartProps> = ({
           }
         }
       }
-      
+
       const newData = transformData(currentNode, currentPath);
       setCurrentData(newData);
     }
@@ -143,7 +132,7 @@ const DrilldownPieChart: React.FC<DrilldownPieChartProps> = ({
 
   const handleBack = () => {
     if (!selectedNode?.path.length) return;
-    
+
     const newPath = selectedNode.path.slice(0, -1);
     const parentName = newPath[newPath.length - 1] || 'root';
     onNodeSelect(parentName, newPath);
@@ -151,7 +140,27 @@ const DrilldownPieChart: React.FC<DrilldownPieChartProps> = ({
 
   // Calculate total value for percentage
   const totalValue = currentData.reduce((sum, item) => sum + item.value, 0);
-  const COLORS = generateColorScale(currentData.length, {});
+
+  // Define primary and secondary green colors
+  const primaryHue = 178;
+  const secondaryHue = 75;
+  const maxLevels = 5; // Maximum expected drilldown levels
+
+  // Calculate interpolated color values based on current level
+  const level = selectedNode?.path.length || 0;
+  const progress = level / maxLevels;
+
+  // Interpolate between primary and secondary colors
+  const hue = Math.round(primaryHue + (secondaryHue - primaryHue) * progress);
+  const saturation = Math.round(100 + (54 - 100) * progress);
+  const lightness = Math.round(21 + (56 - 21) * progress);
+
+  const COLORS = generateColorScale(currentData.length, {
+    hue,
+    saturation,
+    lightness,
+    variation: "both"
+  });
 
   return (
     <div className="w-full h-[400px] relative">
@@ -167,6 +176,15 @@ const DrilldownPieChart: React.FC<DrilldownPieChartProps> = ({
       )}
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
+          <text
+            x="50%"
+            y="50%"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="fill-current text-lg font-medium"
+          >
+            {totalValue.toFixed(2)}
+          </text>
           <Pie
             activeIndex={activeIndex !== null ? activeIndex : undefined}
             activeShape={renderActiveShape}
@@ -191,14 +209,14 @@ const DrilldownPieChart: React.FC<DrilldownPieChartProps> = ({
           </Pie>
         </PieChart>
       </ResponsiveContainer>
-      <div className="absolute bottom-0 left-0 right-0 text-center text-sm text-gray-500">
+      <div className=" text-center text-sm text-gray-500">
         <div>
-          {selectedNode !== null && selectedNode?.path.length > 0 
-            ? `Current: ${selectedNode.path.join(' > ')}` 
+          {selectedNode !== null && selectedNode?.path.length > 0
+            ? `Current: ${selectedNode.path.join(' > ')}`
             : 'Root Level'}
         </div>
         <div className="text-xs mt-1">
-          {activeIndex !== null && currentData[activeIndex] 
+          {activeIndex !== null && currentData[activeIndex]
             ? `${currentData[activeIndex].name}: ${((currentData[activeIndex].value / totalValue) * 100).toFixed(1)}%`
             : 'Hover over slices to see details'}
         </div>
