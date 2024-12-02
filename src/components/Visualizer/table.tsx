@@ -142,7 +142,7 @@ const DataTable: React.FC<TableProps> = ({
   const columns = useMemo(() => {
     if (!data) return [];
 
-    const { timestamps } = parseYamlData(data);
+    // const { timestamps } = parseYamlData(data);
     return [
       columnHelper.accessor("Component", {
         header: "Component",

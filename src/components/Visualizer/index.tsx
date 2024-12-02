@@ -88,7 +88,7 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
   const [metrics, setMetrics] = useState<string[]>([]);
   const [selectedMetric, setSelectedMetric] = useState<string>("");
   const [githubUrl, setGithubUrl] = useState<string>("");
-  const [hoveredTimestamp, setHoveredTimestamp] = useState<string | null>(null);
+  const [hoveredTimestamp] = useState<string | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [cellDetails, setCellDetails] = useState<CellDetails | null>(null);
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
