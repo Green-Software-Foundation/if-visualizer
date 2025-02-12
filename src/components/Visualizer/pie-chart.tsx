@@ -176,22 +176,13 @@ const DrilldownPieChart: React.FC<DrilldownPieChartProps> = ({
       )}
       <ResponsiveContainer width="100%" height="100%">
         <PieChart>
-          <text
-            x="50%"
-            y="50%"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="fill-current text-lg font-medium"
-          >
-            {totalValue.toFixed(2)}
-          </text>
           <Pie
             activeIndex={activeIndex !== null ? activeIndex : undefined}
             activeShape={renderActiveShape}
             data={currentData}
             cx="50%"
             cy="50%"
-            innerRadius={80}
+            innerRadius={0}
             outerRadius={150}
             dataKey="value"
             onMouseEnter={(_, index) => setActiveIndex(index)}

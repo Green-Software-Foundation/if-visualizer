@@ -59,28 +59,6 @@ function App() {
           <Visualizer fileUrl={fileUrl} />
         ) : (
           <div>
-            {/* <section className="py-12 md:py-16">
-              <div className="grid grid-cols-1 gap-x-20 gap-y-12 md:gap-y-16 lg:grid-cols-2 lg:items-center">
-                <div>
-                  <h1 className="mb-2 text-xl md:text-3xl font-bold md:mb-6 text-secondary-lightest">
-                    Impact Framework {" "}
-                    <span className="text-secondary-default">
-                      Manifest Visualizer
-                    </span>
-                  </h1>
-                  <p className="md:text-md text-primary-light">
-                  Explore and visualize environmental impact data from the Green Software Foundation. This tool allows you to input manifest files and analyze various metrics related to software sustainability, helping practitioners and stakeholders understand and reduce the environmental footprint of software.
-                  </p>
-                </div>
-                <div className="max-h-full">
-                  <img
-                    src={HeroImg}
-                    className="w-full object-cover"
-                    alt="Manifest"
-                  />
-                </div>
-              </div>
-            </section> */}
             <div className="py-10">
               <Card className="max-w-lg mx-auto ">
                 <CardHeader>

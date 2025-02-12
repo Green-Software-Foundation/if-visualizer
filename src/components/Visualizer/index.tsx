@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, DownloadIcon } from "lucide-react";
 import Title from "@/components/title";
 import SyntaxHighlighter from "react-syntax-highlighter";
 import { a11yLight } from "react-syntax-highlighter/dist/esm/styles/hljs";
@@ -327,20 +327,39 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
         </TabsContent>
 
         <TabsContent value="rawFile">
-          <div className="mt-4 p-4 rounded-lg bg-primary-lightest-1 border border-primary-lighter max-h-[600px] overflow-auto">
-            <SyntaxHighlighter
-              language="yaml"
-              style={a11yLight}
-              customStyle={{
-                backgroundColor: "transparent",
-                fontSize: "14px",
-                lineHeight: "1.5",
-              }}
-              wrapLines={true}
-              wrapLongLines={true}
-            >
-              {rawFile}
-            </SyntaxHighlighter>
+          <div className="mt-4">
+            <div className="flex justify-end mb-2">
+              <button
+                onClick={() => {
+                  const blob = new Blob([rawFile], { type: 'text/yaml' });
+                  const url = window.URL.createObjectURL(blob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.download = new URL(githubUrl).pathname.split("/").pop() || 'manifest.yaml';
+                  a.click();
+                  window.URL.revokeObjectURL(url);
+                }}
+                className="flex items-center gap-2 px-3 py-2 text-sm text-primary hover:text-primary/80 transition-colors"
+              >
+                <DownloadIcon className="h-4 w-4" />
+                Download
+              </button>
+            </div>
+            <div className="p-4 rounded-lg bg-primary-lightest-1 border border-primary-lighter max-h-[600px] overflow-auto">
+              <SyntaxHighlighter
+                language="yaml"
+                style={a11yLight}
+                customStyle={{
+                  backgroundColor: "transparent",
+                  fontSize: "14px",
+                  lineHeight: "1.5",
+                }}
+                wrapLines={true}
+                wrapLongLines={true}
+              >
+                {rawFile}
+              </SyntaxHighlighter>
+            </div>
           </div>
         </TabsContent>
       </Tabs>
