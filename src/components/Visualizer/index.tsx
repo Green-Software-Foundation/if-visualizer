@@ -94,6 +94,7 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
   const [cellDetails, setCellDetails] = useState<CellDetails | null>(null);
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
   const [showTimestamps, setShowTimestamps] = useState(false);
+  const [showPercentages, setShowPercentages] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -303,6 +304,11 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
           </Drawer>
 
           <div>
+          <div className="flex justify-center items-center gap-4 py-4">
+            <span className="text-primary font-medium">Absolute</span>
+            <Switch onCheckedChange={setShowPercentages} checked={showPercentages} />
+            <span className="text-primary font-medium">Percentage</span>
+          </div>
           <section className="py-8">
               <Title>Component Visualization</Title>
               <DrilldownPieChart
@@ -310,6 +316,7 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
                 selectedMetric={selectedMetric}
                 selectedNode={selectedNode}
                 onNodeSelect={handleNodeSelect}
+                showPercentages={showPercentages}
               />
             </section>
             <section className="py-8">
@@ -328,6 +335,7 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
                   selectedNode={selectedNode}
                   onNodeSelect={handleNodeSelect}
                   showTimestamps={showTimestamps}
+                  showPercentages={showPercentages}
                 />
               </div>
             </section>

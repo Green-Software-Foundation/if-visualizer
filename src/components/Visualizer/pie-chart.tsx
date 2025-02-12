@@ -49,6 +49,7 @@ interface DrilldownPieChartProps {
   selectedMetric: string;
   selectedNode: SelectedNode | null;
   onNodeSelect: (nodeName: string, path: string[], nodeData?: any) => void;
+  showPercentages?: boolean;
 }
 
 const renderActiveShape = (props: any) => {
@@ -92,7 +93,7 @@ const renderCustomLabel = (props: any) => {
   const cos = Math.cos(-RADIAN * midAngle);
 
   // Calculate the position for the label and line
-  const labelRadius = outerRadius * 1.2; // Position labels further from pie
+  const labelRadius = outerRadius * 1.2;
   const labelX = cx + labelRadius * cos;
   const labelY = cy + labelRadius * sin;
 
@@ -113,14 +114,12 @@ const renderCustomLabel = (props: any) => {
 
   return (
     <g>
-      {/* Curved connector line */}
       <path
         d={`M ${lineX},${lineY} Q ${controlX},${controlY} ${labelX},${labelY}`}
         fill="none"
         stroke="#666"
         strokeWidth={1}
       />
-      {/* Label text */}
       <text
         x={labelX}
         y={labelY}
@@ -129,7 +128,9 @@ const renderCustomLabel = (props: any) => {
         dominantBaseline="middle"
         fontSize="12"
       >
-        {`${name}: ${value.toFixed(2)}`}
+        {props.showPercentages
+          ? `${name}: ${(percent * 100).toFixed(1)}%`
+          : `${name}: ${value.toFixed(2)}`}
       </text>
     </g>
   );
@@ -139,7 +140,8 @@ const DrilldownPieChart: React.FC<DrilldownPieChartProps> = ({
   data,
   selectedMetric,
   selectedNode,
-  onNodeSelect
+  onNodeSelect,
+  showPercentages = false
 }) => {
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
   const [currentData, setCurrentData] = useState<ChartData[]>([]);
@@ -249,7 +251,7 @@ const DrilldownPieChart: React.FC<DrilldownPieChartProps> = ({
             onMouseEnter={(_, index) => setActiveIndex(index)}
             onMouseLeave={() => setActiveIndex(null)}
             onClick={(_, index) => handleClick(currentData[index])}
-            label={renderCustomLabel}
+            label={(props) => renderCustomLabel({ ...props, showPercentages })}
             labelLine={false}
           >
             {currentData.map((_, index) => (

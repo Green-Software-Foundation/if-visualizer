@@ -66,6 +66,7 @@ interface TableProps {
   selectedNode: SelectedNode | null;
   onNodeSelect: (nodeName: string, path: string[], nodeData?: any) => void;
   showTimestamps?: boolean;
+  showPercentages?: boolean;
 }
 
 const columnHelper = createColumnHelper<IRow>();
@@ -77,6 +78,7 @@ const DataTable: React.FC<TableProps> = ({
   selectedNode,
   onNodeSelect,
   showTimestamps = false,
+  showPercentages = false,
 }) => {
   const [rowData, setRowData] = useState<IRow[]>([]);
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
@@ -152,8 +154,7 @@ const DataTable: React.FC<TableProps> = ({
           const isSelected = value === selectedNode?.name;
 
           return (
-            <div className={`flex items-center gap-2 ${isSelected ? "text-primary font-bold" : ""
-              }`}>
+            <div className={`flex items-center gap-2 ${isSelected ? "text-primary font-bold" : ""}`}>
               <div style={{ paddingLeft: `${row.depth * 32}px` }} className="flex items-center gap-2">
                 {row.getCanExpand() ? (
                   <button
@@ -192,7 +193,14 @@ const DataTable: React.FC<TableProps> = ({
       }),
       columnHelper.accessor("Total", {
         header: "Total",
-        cell: (info) => info.getValue().toFixed(4),
+        cell: (info) => {
+          const value = info.getValue();
+          if (showPercentages) {
+            const total = rowData[0]?.Total || 1; // Use root total
+            return `${((value / total) * 100).toFixed(1)}%`;
+          }
+          return value.toFixed(4);
+        },
         size: 100,
       }),
     ];
@@ -205,9 +213,12 @@ const DataTable: React.FC<TableProps> = ({
             header: `T${index + 1}`,
             cell: (info) => {
               const value = info.getValue();
-              return value !== undefined && value !== null
-                ? Number(value).toFixed(4)
-                : "N/A";
+              if (value === undefined || value === null) return "N/A";
+              if (showPercentages) {
+                const total = rowData[0]?.[`T${index + 1}`] || 1; // Use root total for the same timestamp
+                return `${((Number(value) / total) * 100).toFixed(1)}%`;
+              }
+              return Number(value).toFixed(4);
             },
           })
         ),
@@ -215,7 +226,7 @@ const DataTable: React.FC<TableProps> = ({
     }
 
     return baseColumns;
-  }, [data, selectedNode, getComponentPath, onNodeSelect, timestamps, showTimestamps]);
+  }, [data, selectedNode, getComponentPath, onNodeSelect, timestamps, showTimestamps, showPercentages, rowData]);
   const table = useReactTable({
     data: rowData,
     columns,
