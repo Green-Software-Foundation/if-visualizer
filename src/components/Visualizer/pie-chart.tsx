@@ -62,15 +62,76 @@ const renderActiveShape = (props: any) => {
     fill,
   } = props;
   return (
+    <g>
     <Sector
-      cx={cx}
-      cy={cy}
-      innerRadius={innerRadius}
-      outerRadius={outerRadius + 8}
-      startAngle={startAngle}
-      endAngle={endAngle}
-      fill={fill}
-    />
+        cx={cx}
+        cy={cy}
+        innerRadius={innerRadius}
+        outerRadius={outerRadius}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        fill={fill}
+      />
+      <Sector
+        cx={cx}
+        cy={cy}
+        startAngle={startAngle}
+        endAngle={endAngle}
+        innerRadius={outerRadius + 6}
+        outerRadius={outerRadius + 10}
+        fill={fill}
+      />
+      </g>
+  );
+};
+
+const renderCustomLabel = (props: any) => {
+  const RADIAN = Math.PI / 180;
+  const { cx, cy, midAngle, outerRadius, percent, name, value } = props;
+  const sin = Math.sin(-RADIAN * midAngle);
+  const cos = Math.cos(-RADIAN * midAngle);
+
+  // Calculate the position for the label and line
+  const labelRadius = outerRadius * 1.2; // Position labels further from pie
+  const labelX = cx + labelRadius * cos;
+  const labelY = cy + labelRadius * sin;
+
+  // Calculate control point for the curved line
+  const controlRadius = outerRadius * 1.1;
+  const controlX = cx + controlRadius * cos;
+  const controlY = cy + controlRadius * sin;
+
+  // Calculate the starting point of the line (on the pie)
+  const lineX = cx + (outerRadius + 10) * cos;
+  const lineY = cy + (outerRadius + 10) * sin;
+
+  // Determine text anchor based on angle
+  const textAnchor = cos >= 0 ? 'start' : 'end';
+
+  // Only show label if percent is above threshold (1%)
+  if (percent < 0.01) return null;
+
+  return (
+    <g>
+      {/* Curved connector line */}
+      <path
+        d={`M ${lineX},${lineY} Q ${controlX},${controlY} ${labelX},${labelY}`}
+        fill="none"
+        stroke="#666"
+        strokeWidth={1}
+      />
+      {/* Label text */}
+      <text
+        x={labelX}
+        y={labelY}
+        textAnchor={textAnchor}
+        fill="#666"
+        dominantBaseline="middle"
+        fontSize="12"
+      >
+        {`${name}: ${value.toFixed(2)}`}
+      </text>
+    </g>
   );
 };
 
@@ -188,7 +249,8 @@ const DrilldownPieChart: React.FC<DrilldownPieChartProps> = ({
             onMouseEnter={(_, index) => setActiveIndex(index)}
             onMouseLeave={() => setActiveIndex(null)}
             onClick={(_, index) => handleClick(currentData[index])}
-            label={({ name, value }) => `${name}: ${value.toFixed(2)}`}
+            label={renderCustomLabel}
+            labelLine={false}
           >
             {currentData.map((_, index) => (
               <Cell
