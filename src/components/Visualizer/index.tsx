@@ -24,6 +24,7 @@ import {
   DrawerTitle,
 } from "@/components/ui/drawer";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 
 interface AggregatedData {
   [key: string]: number;
@@ -92,6 +93,7 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [cellDetails, setCellDetails] = useState<CellDetails | null>(null);
   const [selectedNode, setSelectedNode] = useState<SelectedNode | null>(null);
+  const [showTimestamps, setShowTimestamps] = useState(false);
   const tableRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -301,7 +303,7 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
           </Drawer>
 
           <div>
-            <section className="py-8">
+          <section className="py-8">
               <Title>Component Visualization</Title>
               <DrilldownPieChart
                 data={data}
@@ -310,9 +312,14 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
                 onNodeSelect={handleNodeSelect}
               />
             </section>
-
             <section className="py-8">
-              <Title>Component Breakdown</Title>
+              <div className="flex justify-between items-center mb-4">
+                <Title>Component Breakdown</Title>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">Show Timestamps</span>
+                  <Switch onCheckedChange={setShowTimestamps} checked={showTimestamps} />
+                </div>
+              </div>
               <div ref={tableRef}>
                 <Table
                   data={data}
@@ -320,6 +327,7 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
                   hoveredTimestamp={hoveredTimestamp}
                   selectedNode={selectedNode}
                   onNodeSelect={handleNodeSelect}
+                  showTimestamps={showTimestamps}
                 />
               </div>
             </section>

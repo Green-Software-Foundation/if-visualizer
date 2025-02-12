@@ -65,6 +65,7 @@ interface TableProps {
   hoveredTimestamp: string | null;
   selectedNode: SelectedNode | null;
   onNodeSelect: (nodeName: string, path: string[], nodeData?: any) => void;
+  showTimestamps?: boolean;
 }
 
 const columnHelper = createColumnHelper<IRow>();
@@ -75,6 +76,7 @@ const DataTable: React.FC<TableProps> = ({
   hoveredTimestamp,
   selectedNode,
   onNodeSelect,
+  showTimestamps = false,
 }) => {
   const [rowData, setRowData] = useState<IRow[]>([]);
   const [expandedRows, setExpandedRows] = useState<ExpandedState>({});
@@ -123,11 +125,11 @@ const DataTable: React.FC<TableProps> = ({
       for (const row of rows) {
         // Skip adding 'root' to the path
         const newPath = row.Component === 'root' ? [] : [...currentPath, row.Component];
-        
+
         if (row.Component === target) {
           return row.Component === 'root' ? [] : newPath;
         }
-        
+
         if (row.subRows) {
           const found = findPath(row.subRows, target, newPath);
           if (found.length > 0) return found;
@@ -135,25 +137,23 @@ const DataTable: React.FC<TableProps> = ({
       }
       return [];
     };
-    
+
     return findPath(rowData, componentName);
   }, [rowData]);
 
   const columns = useMemo(() => {
     if (!data) return [];
 
-    // const { timestamps } = parseYamlData(data);
-    return [
+    const baseColumns = [
       columnHelper.accessor("Component", {
         header: "Component",
         cell: ({ row, getValue }) => {
           const value = getValue();
           const isSelected = value === selectedNode?.name;
-          
+
           return (
-            <div className={`flex items-center gap-2 ${
-              isSelected ? "text-primary font-bold" : ""
-            }`}>
+            <div className={`flex items-center gap-2 ${isSelected ? "text-primary font-bold" : ""
+              }`}>
               <div style={{ paddingLeft: `${row.depth * 32}px` }} className="flex items-center gap-2">
                 {row.getCanExpand() ? (
                   <button
@@ -195,20 +195,27 @@ const DataTable: React.FC<TableProps> = ({
         cell: (info) => info.getValue().toFixed(4),
         size: 100,
       }),
-      // ...timestamps.map((_timestamp, index) =>
-      //   columnHelper.accessor(`T${index + 1}` as const, {
-      //     header: `T${index + 1}`,
-      //     cell: (info) => {
-      //       const value = info.getValue();
-      //       return value !== undefined && value !== null
-      //         ? Number(value).toFixed(4)
-      //         : "N/A";
-      //     },
-      //   })
-      // ),
     ];
-  }, [data, parseYamlData, columnHelper, selectedNode, getComponentPath, onNodeSelect]);
 
+    if (showTimestamps) {
+      return [
+        ...baseColumns,
+        ...timestamps.map((_timestamp, index) =>
+          columnHelper.accessor(`T${index + 1}` as const, {
+            header: `T${index + 1}`,
+            cell: (info) => {
+              const value = info.getValue();
+              return value !== undefined && value !== null
+                ? Number(value).toFixed(4)
+                : "N/A";
+            },
+          })
+        ),
+      ];
+    }
+
+    return baseColumns;
+  }, [data, selectedNode, getComponentPath, onNodeSelect, timestamps, showTimestamps]);
   const table = useReactTable({
     data: rowData,
     columns,
@@ -263,11 +270,10 @@ const DataTable: React.FC<TableProps> = ({
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  className={`whitespace-nowrap ${
-                    header.id === "Component"
+                  className={`whitespace-nowrap ${header.id === "Component"
                       ? "sticky left-0 z-10 bg-primary-lightest-2 drop-shadow-md"
                       : ""
-                  }`}
+                    }`}
                 >
                   {flexRender(
                     header.column.columnDef.header,
@@ -280,7 +286,7 @@ const DataTable: React.FC<TableProps> = ({
         </TableHeader>
         <TableBody>
           {table.getRowModel().rows.map((row) => (
-            <TableRow 
+            <TableRow
               key={row.id}
               className={row.original.Component === selectedNode?.name ? "bg-primary-lighter" : ""}
               onClick={() => {
@@ -293,16 +299,15 @@ const DataTable: React.FC<TableProps> = ({
                   cell.column.id !== "Component" &&
                   cell.column.id !== "Total" &&
                   hoveredTimestamp ===
-                    timestamps[parseInt(cell.column.id.slice(1)) - 1];
+                  timestamps[parseInt(cell.column.id.slice(1)) - 1];
 
                 return (
                   <TableCell
                     key={cell.id}
-                    className={`whitespace-nowrap ${
-                      cell.column.id === "Component"
+                    className={`whitespace-nowrap ${cell.column.id === "Component"
                         ? "sticky left-0 z-10 bg-secondary-lightest-1 drop-shadow-md font-bold text-primary-dark"
                         : "hover:bg-gray-100 cursor-pointer"
-                    } ${isHighlighted ? "bg-primary-lighter font-bold" : ""}`}
+                      } ${isHighlighted ? "bg-primary-lighter font-bold" : ""}`}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>
