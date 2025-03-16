@@ -17,6 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { ChevronRight, ChevronDown, EyeIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface IRow {
   Component: string;
@@ -154,7 +155,10 @@ const DataTable: React.FC<TableProps> = ({
           const isSelected = value === selectedNode?.name;
 
           return (
-            <div className={`flex items-center gap-2 ${isSelected ? "text-primary font-bold" : ""}`}>
+            <div className={cn(
+              "flex items-center gap-2",
+              isSelected && "text-primary font-bold"
+            )}>
               <div style={{ paddingLeft: `${row.depth * 32}px` }} className="flex items-center gap-2">
                 {row.getCanExpand() ? (
                   <button
@@ -162,7 +166,7 @@ const DataTable: React.FC<TableProps> = ({
                       e.stopPropagation();
                       row.getToggleExpandedHandler()();
                     }}
-                    className="focus:outline-none hover:bg-gray-100 rounded p-1"
+                    className="focus:outline-none hover:bg-muted/50 rounded p-1"
                   >
                     {row.getIsExpanded() ? (
                       <ChevronDown size={16} />
@@ -181,7 +185,7 @@ const DataTable: React.FC<TableProps> = ({
                   const path = getComponentPath(value as string);
                   onNodeSelect(value as string, path, row.original.node);
                 }}
-                className="ml-2 hover:bg-gray-100 rounded p-1"
+                className="ml-2 hover:bg-muted/50 rounded p-1"
                 title="View in pie chart"
               >
                 <EyeIcon size={16} />
@@ -194,9 +198,9 @@ const DataTable: React.FC<TableProps> = ({
       columnHelper.accessor("Total", {
         header: "Total",
         cell: (info) => {
-          const value = info.getValue();
+          const value = Number(info.getValue());
           if (showPercentages) {
-            const total = rowData[0]?.Total || 1; // Use root total
+            const total = Number(rowData[0]?.Total || 1); // Use root total
             return `${((value / total) * 100).toFixed(1)}%`;
           }
           return value.toFixed(4);
@@ -215,7 +219,7 @@ const DataTable: React.FC<TableProps> = ({
               const value = info.getValue();
               if (value === undefined || value === null) return "N/A";
               if (showPercentages) {
-                const total = rowData[0]?.[`T${index + 1}`] || 1; // Use root total for the same timestamp
+                const total = Number(rowData[0]?.[`T${index + 1}`] || 1); // Use root total for the same timestamp
                 return `${((Number(value) / total) * 100).toFixed(1)}%`;
               }
               return Number(value).toFixed(4);
@@ -273,7 +277,7 @@ const DataTable: React.FC<TableProps> = ({
   }, [selectedNode, rowData, data]);
 
   return (
-    <div className="overflow-auto">
+    <div className="w-full overflow-auto rounded-md border">
       <Table>
         <TableHeader>
           {table.getHeaderGroups().map((headerGroup) => (
@@ -281,10 +285,10 @@ const DataTable: React.FC<TableProps> = ({
               {headerGroup.headers.map((header) => (
                 <TableHead
                   key={header.id}
-                  className={`whitespace-nowrap ${header.id === "Component"
-                      ? "sticky left-0 z-10 bg-primary-lightest-2 drop-shadow-md"
-                      : ""
-                    }`}
+                  className={cn(
+                    "whitespace-nowrap",
+                    header.id === "Component" && "sticky left-0 z-10 bg-primary-lightest-1 drop-shadow-md"
+                  )}
                 >
                   {flexRender(
                     header.column.columnDef.header,
@@ -299,7 +303,9 @@ const DataTable: React.FC<TableProps> = ({
           {table.getRowModel().rows.map((row) => (
             <TableRow
               key={row.id}
-              className={row.original.Component === selectedNode?.name ? "bg-primary-lighter" : ""}
+              className={cn(
+                row.original.Component === selectedNode?.name && "bg-primary-lighter"
+              )}
               onClick={() => {
                 const path = getComponentPath(row.original.Component);
                 onNodeSelect(row.original.Component, path, row.original.node);
@@ -315,10 +321,12 @@ const DataTable: React.FC<TableProps> = ({
                 return (
                   <TableCell
                     key={cell.id}
-                    className={`whitespace-nowrap ${cell.column.id === "Component"
-                        ? "sticky left-0 z-10 bg-secondary-lightest-1 drop-shadow-md font-bold text-primary-dark"
-                        : "hover:bg-gray-100 cursor-pointer"
-                      } ${isHighlighted ? "bg-primary-lighter font-bold" : ""}`}
+                    className={cn(
+                      "whitespace-nowrap",
+                      cell.column.id === "Component" && "sticky left-0 z-10 bg-secondary-lightest-1 drop-shadow-md font-bold text-primary-dark",
+                      isHighlighted && "bg-primary-lighter font-bold",
+                      cell.column.id !== "Component" && "hover:bg-muted/50 cursor-pointer"
+                    )}
                   >
                     {flexRender(cell.column.columnDef.cell, cell.getContext())}
                   </TableCell>

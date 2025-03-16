@@ -242,60 +242,118 @@ const Visualizer = ({ fileUrl }: { fileUrl: string }) => {
           </div>
 
           <Drawer open={isDrawerOpen} onOpenChange={setIsDrawerOpen}>
-            <DrawerContent>
-              <DrawerHeader>
-                <DrawerTitle>Component Details</DrawerTitle>
-                <DrawerClose />
+            <DrawerContent className="max-w-4xl mx-auto rounded-t-xl">
+              <DrawerHeader className="border-b border-gray-100">
+                <DrawerTitle className="text-xl font-bold text-primary">Component Details</DrawerTitle>
+                <DrawerClose className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-secondary" />
               </DrawerHeader>
-              <ScrollArea className="h-[80vh]">
+              <ScrollArea>
                 {cellDetails && (
-                  <div className="p-4">
-                    {/* Add your drawer content here */}
+                  <div className="p-6 space-y-6">
+                    {/* Defaults Section */}
                     {Object.keys(cellDetails.defaults).length > 0 && (
-                      <div>
-                        <Title>Defaults</Title>
-                        {Object.entries(cellDetails.defaults).map(([key, value]) => (
-                          <div key={key} className="p-1">
-                            <span className="font-bold">{key}: </span>
-                            <span>{value}</span>
+                      <Card className="overflow-hidden border border-gray-100 shadow-sm">
+                        <CardHeader className="bg-gray-50 py-3 px-4">
+                          <CardTitle className="text-md font-semibold text-primary flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-settings">
+                              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+                              <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                            Defaults
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                          <div className="grid grid-cols-1 gap-2">
+                            {Object.entries(cellDetails.defaults).map(([key, value]) => (
+                              <div key={key} className="flex justify-between items-center py-1 px-2 rounded hover:bg-gray-50">
+                                <span className="font-medium text-gray-700">{key}</span>
+                                <Badge variant="outline" className="font-mono">{value}</Badge>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </CardContent>
+                      </Card>
                     )}
                     
+                    {/* Inputs Section */}
                     {Object.keys(cellDetails.inputs).length > 0 && (
-                      <div>
-                        <Title>Inputs</Title>
-                        {Object.entries(cellDetails.inputs).map(([key, value]) => (
-                          <div key={key} className="p-1">
-                            <span className="font-bold">{key}: </span>
-                            <span>{value}</span>
+                      <Card className="overflow-hidden border border-gray-100 shadow-sm">
+                        <CardHeader className="bg-gray-50 py-3 px-4">
+                          <CardTitle className="text-md font-semibold text-primary flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-down-right">
+                              <path d="M7 7L17 17"></path>
+                              <path d="M17 7V17H7"></path>
+                            </svg>
+                            Inputs
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                          <div className="grid grid-cols-1 gap-2">
+                            {Object.entries(cellDetails.inputs).map(([key, value]) => (
+                              <div key={key} className="flex justify-between items-center py-1 px-2 rounded hover:bg-gray-50">
+                                <span className="font-medium text-gray-700">{key}</span>
+                                <Badge variant="outline" className="font-mono">{value}</Badge>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </CardContent>
+                      </Card>
                     )}
 
+                    {/* Pipeline Section */}
                     {cellDetails.pipeline.length > 0 && (
-                      <div>
-                        <Title>Pipeline</Title>
-                        {cellDetails.pipeline.map((item, index) => (
-                          <div key={index} className="p-1">
-                            {item}
+                      <Card className="overflow-hidden border border-gray-100 shadow-sm">
+                        <CardHeader className="bg-gray-50 py-3 px-4">
+                          <CardTitle className="text-md font-semibold text-primary flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-git-branch">
+                              <line x1="6" x2="6" y1="3" y2="15"></line>
+                              <circle cx="18" cy="6" r="3"></circle>
+                              <circle cx="6" cy="18" r="3"></circle>
+                              <path d="M18 9a9 9 0 0 1-9 9"></path>
+                            </svg>
+                            Pipeline
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                          <div className="space-y-2">
+                            {cellDetails.pipeline.map((item, index) => (
+                              <div key={index} className="flex items-center gap-2">
+                                <div className="flex-shrink-0 w-6 h-6 rounded-full bg-primary-lighter flex items-center justify-center text-xs font-medium text-primary">
+                                  {index + 1}
+                                </div>
+                                <div className="py-2 px-3 bg-gray-50 rounded-md font-mono text-sm flex-grow">
+                                  {item}
+                                </div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </CardContent>
+                      </Card>
                     )}
 
+                    {/* Outputs Section */}
                     {Object.keys(cellDetails.outputs).length > 0 && (
-                      <div>
-                        <Title>Outputs</Title>
-                        {Object.entries(cellDetails.outputs).map(([key, value]) => (
-                          <div key={key} className="p-1">
-                            <span className="font-bold">{key}: </span>
-                            <span>{value}</span>
+                      <Card className="overflow-hidden border border-gray-100 shadow-sm">
+                        <CardHeader className="bg-gray-50 py-3 px-4">
+                          <CardTitle className="text-md font-semibold text-primary flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-arrow-up-right">
+                              <path d="M7 17L17 7"></path>
+                              <path d="M7 7h10v10"></path>
+                            </svg>
+                            Outputs
+                          </CardTitle>
+                        </CardHeader>
+                        <CardContent className="p-4">
+                          <div className="grid grid-cols-1 gap-2">
+                            {Object.entries(cellDetails.outputs).map(([key, value]) => (
+                              <div key={key} className="flex justify-between items-center py-1 px-2 rounded hover:bg-gray-50">
+                                <span className="font-medium text-gray-700">{key}</span>
+                                <Badge variant="outline" className="font-mono">{value}</Badge>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        </CardContent>
+                      </Card>
                     )}
                   </div>
                 )}
